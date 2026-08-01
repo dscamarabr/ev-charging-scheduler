@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { formatarDataHora } from "../../lib/formatarDataHora.js";
+import NavBar from "../../components/NavBar.jsx";
 
 // UC-14 — Consultar Histórico Administrativo (RF-26, RF-27)
 export default function AdminHistorico() {
@@ -25,6 +27,8 @@ export default function AdminHistorico() {
   }, [aba]);
 
   return (
+    <>
+    <NavBar />
     <main style={{ maxWidth: 720, margin: "40px auto", fontFamily: "sans-serif" }}>
       <h1>Histórico Administrativo</h1>
       <div>
@@ -41,7 +45,7 @@ export default function AdminHistorico() {
                 <td>{r.unidade?.numero}</td>
                 <td>{r.ponto_carregamento?.nome}</td>
                 <td>{r.tipo}</td>
-                <td>{new Date(r.inicio_previsto).toLocaleString("pt-BR")}</td>
+                <td>{formatarDataHora(r.inicio_previsto)}</td>
                 <td>{r.status}</td>
               </tr>
             ))}
@@ -56,13 +60,14 @@ export default function AdminHistorico() {
             {alertas.map((a) => (
               <tr key={a.id}>
                 <td>{a.unidade_solicitante?.numero}</td>
-                <td>{new Date(a.enviado_em).toLocaleString("pt-BR")}</td>
-                <td>{a.visualizado_em ? new Date(a.visualizado_em).toLocaleString("pt-BR") : "—"}</td>
+                <td>{formatarDataHora(a.enviado_em)}</td>
+                <td>{a.visualizado_em ? formatarDataHora(a.visualizado_em) : "—"}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
     </main>
+    </>
   );
 }

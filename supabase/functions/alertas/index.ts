@@ -9,7 +9,8 @@
 //
 // Rotas (via query param `acao`):
 //   POST /alertas?acao=disparar   { minha_reserva_id }
-//   GET  /alertas?acao=recebidos                        (JWT do solicitante da requisição)
+//   GET  /alertas?acao=recebidos   — alertas em que EU sou a unidade atrasada
+//   GET  /alertas?acao=enviados    — alertas que EU disparei (sem revelar quem recebeu)
 //   POST /alertas?acao=visualizar { alerta_id }
 //
 // Deploy: supabase functions deploy alertas
@@ -19,7 +20,22 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Sem isso, o navegador nunca chega a mandar a requisição de verdade: como
+// esta function é chamada direto do frontend (fetch em MinhasReservas.jsx e
+// Alertas.jsx) com header Authorization, o navegador manda um preflight
+// OPTIONS antes — sem resposta com esses headers, ele aborta com "Failed to
+// fetch" (é assim que falha de CORS aparece no fetch, sem detalhe nenhum).
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+};
+
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   const url = new URL(req.url);
   const acao = url.searchParams.get("acao");
 
@@ -43,20 +59,22 @@ Deno.serve(async (req) => {
   }
 
   if (acao === "recebidos" && req.method === "GET") {
-    const { data: userData } = await supabaseAsUser.auth.getUser();
-    const { data: unidade } = await supabaseAsUser
-      .from("unidade")
-      .select("id")
-      .eq("auth_user_id", userData.user?.id)
-      .single();
+    const unidade = await unidadeDoChamador(supabaseAsUser);
     if (!unidade) return json({ error: "Unidade não encontrada" }, 401);
 
     // Busca alertas cuja reserva_atrasada pertence a esta unidade,
-    // devolvendo apenas os campos não identificadores (RF-20, RNF-08)
+    // devolvendo apenas os campos não identificadores (RF-20, RNF-08).
+    // O `!inner` é essencial aqui: por padrão o PostgREST embeda a
+    // relação como LEFT JOIN, e um .eq() num campo embedado SEM !inner
+    // não filtra as linhas de `alerta` retornadas — só filtraria dentro
+    // de uma relação to-many. Sem isso, TODO alerta era devolvido pra
+    // QUALQUER unidade autenticada (quem enviou via "disparar" também
+    // via o próprio alerta aqui, como se tivesse recebido).
     const { data: alertas } = await supabaseAdmin
       .from("alerta")
-      .select("id, enviado_em, visualizado_em, reserva:reserva_atrasada_id(unidade_id)")
-      .eq("reserva.unidade_id", unidade.id);
+      .select("id, enviado_em, visualizado_em, reserva:reserva_atrasada_id!inner(unidade_id)")
+      .eq("reserva.unidade_id", unidade.id)
+      .order("enviado_em", { ascending: false });
 
     const sanitizados = (alertas ?? []).map((a: any) => ({
       id: a.id,
@@ -65,6 +83,23 @@ Deno.serve(async (req) => {
       // unidade_solicitante_id NUNCA é incluído na resposta
     }));
     return json({ alertas: sanitizados });
+  }
+
+  if (acao === "enviados" && req.method === "GET") {
+    const unidade = await unidadeDoChamador(supabaseAsUser);
+    if (!unidade) return json({ error: "Unidade não encontrada" }, 401);
+
+    // Alertas que ESTA unidade disparou. Aqui o filtro é numa coluna
+    // direta de `alerta` (unidade_solicitante_id), não numa relação
+    // embedada, então não precisa de !inner. Só devolvemos se foi
+    // visto ou não — nunca de quem era a reserva atrasada (RF-20).
+    const { data: alertas } = await supabaseAdmin
+      .from("alerta")
+      .select("id, enviado_em, visualizado_em")
+      .eq("unidade_solicitante_id", unidade.id)
+      .order("enviado_em", { ascending: false });
+
+    return json({ alertas: alertas ?? [] });
   }
 
   if (acao === "visualizar" && req.method === "POST") {
@@ -83,6 +118,18 @@ Deno.serve(async (req) => {
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+async function unidadeDoChamador(
+  supabaseAsUser: ReturnType<typeof createClient>
+): Promise<{ id: string } | null> {
+  const { data: userData } = await supabaseAsUser.auth.getUser();
+  const { data: unidade } = await supabaseAsUser
+    .from("unidade")
+    .select("id")
+    .eq("auth_user_id", userData.user?.id)
+    .single();
+  return unidade ?? null;
 }

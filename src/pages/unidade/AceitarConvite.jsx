@@ -1,0 +1,132 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../../lib/supabaseClient";
+
+// Completa o convite enviado por AdminUnidades (via Edge Function `unidades`,
+// que chama `auth.admin.inviteUserByEmail`). O usuário criado por convite
+// AINDA NÃO TEM SENHA — por isso o Login normal (email + senha) não
+// funciona até essa etapa ser concluída. Duas formas de chegar aqui:
+//
+//  A) Clicando no link do e-mail (?type=invite&redirect_to=.../convite):
+//     o Supabase Auth já estabelece uma sessão temporária via token na URL
+//     antes desta página carregar (supabase-js detecta isso sozinho).
+//  B) Colando o código de 6 dígitos do e-mail nesta tela (útil quando o
+//     link não abre, ex. e-mail em outro dispositivo): validamos com
+//     `verifyOtp({ type: "invite" })`, que também estabelece a sessão.
+//
+// De qualquer forma, o passo final é sempre o mesmo: com a sessão
+// (temporária) já ativa, `updateUser({ password })` define a senha
+// definitiva da unidade.
+export default function AceitarConvite() {
+  const [autenticado, setAutenticado] = useState(false);
+  const [verificando, setVerificando] = useState(true);
+  const [email, setEmail] = useState("");
+  const [codigo, setCodigo] = useState("");
+  const [senha, setSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [erro, setErro] = useState(null);
+  const [salvando, setSalvando] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Se veio pelo link do e-mail, a sessão já deve estar pronta aqui.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAutenticado(!!session);
+      setVerificando(false);
+    });
+  }, []);
+
+  async function validarCodigo(e) {
+    e.preventDefault();
+    setErro(null);
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: codigo,
+      type: "invite",
+    });
+    if (error) {
+      setErro(error.message);
+      return;
+    }
+    setAutenticado(true);
+  }
+
+  async function definirSenha(e) {
+    e.preventDefault();
+    setErro(null);
+    if (senha !== confirmarSenha) {
+      setErro("As senhas não conferem.");
+      return;
+    }
+    if (senha.length < 6) {
+      setErro("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    setSalvando(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: senha });
+      if (error) {
+        setErro(error.message);
+        return;
+      }
+      navigate("/reservas/nova");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  if (verificando) return null;
+
+  return (
+    <main style={{ maxWidth: 360, margin: "40px auto", fontFamily: "sans-serif" }}>
+      <h1>Aceitar convite</h1>
+
+      {!autenticado && (
+        <>
+          <p>Cole abaixo o código de 6 dígitos que veio no e-mail de convite.</p>
+          <form onSubmit={validarCodigo}>
+            <label>
+              E-mail
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </label>
+            <label>
+              Código
+              <input
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value)}
+                inputMode="numeric"
+                required
+              />
+            </label>
+            {erro && <p style={{ color: "crimson" }}>{erro}</p>}
+            <button type="submit">Validar código</button>
+          </form>
+        </>
+      )}
+
+      {autenticado && (
+        <>
+          <p>Convite confirmado. Defina sua senha de acesso:</p>
+          <form onSubmit={definirSenha}>
+            <label>
+              Nova senha
+              <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required minLength={6} />
+            </label>
+            <label>
+              Confirmar senha
+              <input
+                type="password"
+                value={confirmarSenha}
+                onChange={(e) => setConfirmarSenha(e.target.value)}
+                required
+                minLength={6}
+              />
+            </label>
+            {erro && <p style={{ color: "crimson" }}>{erro}</p>}
+            <button type="submit" disabled={salvando}>{salvando ? "Salvando..." : "Definir senha e entrar"}</button>
+          </form>
+        </>
+      )}
+    </main>
+  );
+}

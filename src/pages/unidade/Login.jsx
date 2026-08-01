@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 
 // UC-02 — Autenticar-se no sistema (RF-02)
@@ -17,7 +17,7 @@ export default function Login() {
       setErro(error.message);
       return;
     }
-    navigate("/home");
+    navigate("/reservas/nova");
   }
 
   return (
@@ -35,6 +35,9 @@ export default function Login() {
         {erro && <p style={{ color: "crimson" }}>{erro}</p>}
         <button type="submit">Entrar</button>
       </form>
+      <p style={{ fontSize: 12 }}>
+        Recebeu um convite do síndico? <Link to="/convite">Aceitar convite / definir senha</Link>
+      </p>
     </main>
   );
 }
