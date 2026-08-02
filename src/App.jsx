@@ -12,6 +12,8 @@ import Perfil from "./pages/unidade/Perfil.jsx";
 import AdminUnidades from "./pages/admin/Unidades.jsx";
 import AdminPontos from "./pages/admin/Pontos.jsx";
 import AdminHistorico from "./pages/admin/Historico.jsx";
+import EstatisticaReservas from "./pages/admin/EstatisticaReservas.jsx";
+import EstatisticaAlertas from "./pages/admin/EstatisticaAlertas.jsx";
 
 // Rotas espelham as telas do Wireframes.docx (seções 3 e 4) e os
 // casos de uso do Casos_de_Uso_User_Stories.docx.
@@ -36,6 +38,8 @@ export default function App() {
         <Route path="/admin/unidades" element={<RequireAuth adminOnly><AdminUnidades /></RequireAuth>} />
         <Route path="/admin/pontos" element={<RequireAuth adminOnly><AdminPontos /></RequireAuth>} />
         <Route path="/admin/historico" element={<RequireAuth adminOnly><AdminHistorico /></RequireAuth>} />
+        <Route path="/admin/estatistica-reservas" element={<RequireAuth adminOnly><EstatisticaReservas /></RequireAuth>} />
+        <Route path="/admin/estatistica-alertas" element={<RequireAuth adminOnly><EstatisticaAlertas /></RequireAuth>} />
       </Routes>
     </BrowserRouter>
   );

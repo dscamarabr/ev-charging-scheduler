@@ -18,7 +18,7 @@ export default function MinhasReservas() {
       .from("reserva")
       .select("*, ponto_carregamento(nome)")
       .eq("unidade_id", minhaUnidadeId)
-      .order("criado_em", { ascending: false });
+      .order("inicio_previsto", { ascending: false });
     setReservas(data ?? []);
   }
 
@@ -33,6 +33,7 @@ export default function MinhasReservas() {
   }
 
   async function liberar(id) {
+    if (!confirm("Liberar o ponto agora? Isso encerra sua reserva antes do horário previsto.")) return;
     await supabase.rpc("liberar_reserva", { p_reserva_id: id });
     carregar();
   }
@@ -79,7 +80,7 @@ export default function MinhasReservas() {
         <div key={r.id} style={{ border: "1px solid #ccc", padding: 12, marginBottom: 8 }}>
           <strong>{r.ponto_carregamento?.nome} — {r.tipo}</strong>
           <div>
-            {formatarDataHora(r.inicio_previsto)} até {formatarDataHora(r.fim_previsto)}
+            {formatarDataHora(r.inicio_previsto)} até {formatarDataHora(r.fim_real ?? r.fim_previsto)}
           </div>
           <div>{r.status}</div>
           {r.status === "confirmada" && (
@@ -89,7 +90,7 @@ export default function MinhasReservas() {
             <>
               <button onClick={() => liberar(r.id)}>Liberar agora</button>{" "}
               <button onClick={() => cancelar(r.id)}>Cancelar</button>{" "}
-              <button onClick={() => avisarAtraso(r.id)}>Avisar atraso</button>
+              <button onClick={() => avisarAtraso(r.id)}>Solicitar retirada de veículo</button>
             </>
           )}
         </div>

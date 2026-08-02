@@ -3,6 +3,21 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import NavBar from "../../components/NavBar.jsx";
 
+// Valores pro atributo `min` dos inputs de data — impede escolher algo no
+// passado direto no calendário/relógio do navegador (a RPC criar_reserva
+// também rejeita no backend, mas isso evita o usuário nem tentar).
+function agoraComoDatetimeLocal() {
+  const agora = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${agora.getFullYear()}-${pad(agora.getMonth() + 1)}-${pad(agora.getDate())}T${pad(agora.getHours())}:${pad(agora.getMinutes())}`;
+}
+
+function hojeComoData() {
+  const agora = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${agora.getFullYear()}-${pad(agora.getMonth() + 1)}-${pad(agora.getDate())}`;
+}
+
 // UC-06 — Criar Reserva (RF-08 a RF-14) — Wireframes, tela 03
 export default function CriarReserva() {
   const [pontos, setPontos] = useState([]);
@@ -10,8 +25,7 @@ export default function CriarReserva() {
   const [tipo, setTipo] = useState("diurna");
   const [inicio, setInicio] = useState(""); // diurna: data + hora livres
   const [dataNoturna, setDataNoturna] = useState(""); // noturna: só a data, hora é sempre 21h
-  const [duracao, setDuracao] = useState(60);
-  const [erro, setErro] = useState(null);
+  const [duracao, setDuracao] = useState(180);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,10 +44,9 @@ export default function CriarReserva() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setErro(null);
 
     if (!pontoId) {
-      setErro("Selecione um ponto de carregamento.");
+      alert("Selecione um ponto de carregamento.");
       return;
     }
 
@@ -41,7 +54,7 @@ export default function CriarReserva() {
     // unidade só escolhe o dia, não o horário.
     const inicioEscolhido = tipo === "noturna" ? `${dataNoturna}T21:00` : inicio;
     if (!inicioEscolhido) {
-      setErro(tipo === "noturna" ? "Selecione o dia da reserva." : "Selecione data e horário.");
+      alert(tipo === "noturna" ? "Selecione o dia da reserva." : "Selecione data e horário.");
       return;
     }
 
@@ -56,7 +69,7 @@ export default function CriarReserva() {
     });
 
     if (error) {
-      setErro(error.message);
+      alert(error.message);
       return;
     }
     navigate("/reservas");
@@ -91,12 +104,24 @@ export default function CriarReserva() {
         {tipo === "diurna" ? (
           <label>
             Início
-            <input type="datetime-local" value={inicio} onChange={(e) => setInicio(e.target.value)} required />
+            <input
+              type="datetime-local"
+              value={inicio}
+              onChange={(e) => setInicio(e.target.value)}
+              min={agoraComoDatetimeLocal()}
+              required
+            />
           </label>
         ) : (
           <label>
             Dia da reserva
-            <input type="date" value={dataNoturna} onChange={(e) => setDataNoturna(e.target.value)} required />
+            <input
+              type="date"
+              value={dataNoturna}
+              onChange={(e) => setDataNoturna(e.target.value)}
+              min={hojeComoData()}
+              required
+            />
             <small> horário fixo: 21h às 6h do dia seguinte</small>
           </label>
         )}
@@ -115,7 +140,6 @@ export default function CriarReserva() {
             )}
           </label>
         )}
-        {erro && <p style={{ color: "crimson" }}>{erro}</p>}
         <button type="submit" disabled={!pontoId}>Confirmar Reserva</button>
       </form>
     </main>

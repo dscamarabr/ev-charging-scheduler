@@ -25,10 +25,16 @@ export default function Alertas() {
 
       if (aba === "recebidos") {
         const lista = json.alertas ?? [];
-        setRecebidos(lista);
+        const agora = new Date().toISOString();
         // UC-11: abrir esta tela é o próprio ato de "visualizar" o
         // alerta — marca os que ainda não tinham sido vistos, pra quem
-        // enviou conseguir ver o status na aba Enviados.
+        // enviou conseguir ver o status na aba Enviados. Atualiza o
+        // horário localmente também, senão a tela mostraria "recebido"
+        // sem "visualizado" até a próxima vez que a lista for buscada.
+        const listaAtualizada = lista.map((item) =>
+          item.visualizado_em ? item : { ...item, visualizado_em: agora }
+        );
+        setRecebidos(listaAtualizada);
         for (const a of lista.filter((item) => !item.visualizado_em)) {
           fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/alertas?acao=visualizar`, {
             method: "POST",
@@ -58,8 +64,9 @@ export default function Alertas() {
           {recebidos.length === 0 && <p>Nenhum alerta recebido no momento.</p>}
           {recebidos.map((a) => (
             <div key={a.id} style={{ border: "1px solid #ccc", padding: 12, marginBottom: 8 }}>
-              <strong>Aviso de atraso (anônimo)</strong>
+              <strong>Aviso de atraso</strong>
               <div>Recebido em {formatarDataHora(a.enviado_em)}</div>
+              <div>Visualizado em {formatarDataHora(a.visualizado_em)}</div>
             </div>
           ))}
         </>
@@ -70,7 +77,7 @@ export default function Alertas() {
           {enviados.length === 0 && <p>Você ainda não enviou nenhum alerta.</p>}
           {enviados.map((a) => (
             <div key={a.id} style={{ border: "1px solid #ccc", padding: 12, marginBottom: 8 }}>
-              <strong>Alerta enviado (anônimo)</strong>
+              <strong>Alerta enviado</strong>
               <div>Enviado em {formatarDataHora(a.enviado_em)}</div>
               <div>
                 {a.visualizado_em

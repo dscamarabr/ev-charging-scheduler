@@ -11,6 +11,8 @@ export default function AdminUnidades() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState(null);
   const [acaoEmAndamento, setAcaoEmAndamento] = useState(null); // id da unidade sofrendo ação
+  const [editandoId, setEditandoId] = useState(null);
+  const [formEdicao, setFormEdicao] = useState({ numero: "", nome_responsavel: "" });
 
   async function carregar() {
     const { data } = await supabase.from("unidade").select("*").order("numero");
@@ -44,6 +46,31 @@ export default function AdminUnidades() {
 
   async function alternarAtivo(u) {
     await supabase.from("unidade").update({ ativo: !u.ativo }).eq("id", u.id);
+    carregar();
+  }
+
+  function iniciarEdicao(u) {
+    setEditandoId(u.id);
+    setFormEdicao({ numero: u.numero, nome_responsavel: u.nome_responsavel });
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+  }
+
+  async function salvarEdicao(id) {
+    setErro(null);
+    // RLS `unidade_update` já libera admin editar qualquer unidade, sem
+    // precisar passar pela Edge Function (não envolve o Auth, só a tabela).
+    const { error } = await supabase
+      .from("unidade")
+      .update({ numero: formEdicao.numero, nome_responsavel: formEdicao.nome_responsavel })
+      .eq("id", id);
+    if (error) {
+      setErro(error.message);
+      return;
+    }
+    setEditandoId(null);
     carregar();
   }
 
@@ -93,25 +120,52 @@ export default function AdminUnidades() {
           <tr><th>Número</th><th>Responsável</th><th>E-mail</th><th>Status</th><th /></tr>
         </thead>
         <tbody>
-          {unidades.map((u) => (
-            <tr key={u.id}>
-              <td>{u.numero}</td>
-              <td>{u.nome_responsavel}</td>
-              <td>{u.email}</td>
-              <td>{u.ativo ? "Ativo" : "Inativo"}</td>
-              <td>
-                <button onClick={() => alternarAtivo(u)} disabled={acaoEmAndamento === u.id}>
-                  {u.ativo ? "Desativar" : "Ativar"}
-                </button>{" "}
-                <button onClick={() => reenviarConvite(u)} disabled={acaoEmAndamento === u.id}>
-                  Reenviar convite
-                </button>{" "}
-                <button onClick={() => excluir(u)} disabled={acaoEmAndamento === u.id} style={{ color: "crimson" }}>
-                  Excluir
-                </button>
-              </td>
-            </tr>
-          ))}
+          {unidades.map((u) =>
+            editandoId === u.id ? (
+              <tr key={u.id}>
+                <td>
+                  <input
+                    value={formEdicao.numero}
+                    onChange={(e) => setFormEdicao({ ...formEdicao, numero: e.target.value })}
+                    style={{ width: 70 }}
+                  />
+                </td>
+                <td>
+                  <input
+                    value={formEdicao.nome_responsavel}
+                    onChange={(e) => setFormEdicao({ ...formEdicao, nome_responsavel: e.target.value })}
+                  />
+                </td>
+                <td>{u.email}</td>
+                <td>{u.ativo ? "Ativo" : "Inativo"}</td>
+                <td>
+                  <button onClick={() => salvarEdicao(u.id)}>Salvar</button>{" "}
+                  <button onClick={cancelarEdicao}>Cancelar</button>
+                </td>
+              </tr>
+            ) : (
+              <tr key={u.id}>
+                <td>{u.numero}</td>
+                <td>{u.nome_responsavel}</td>
+                <td>{u.email}</td>
+                <td>{u.ativo ? "Ativo" : "Inativo"}</td>
+                <td>
+                  <button onClick={() => iniciarEdicao(u)} disabled={acaoEmAndamento === u.id}>
+                    Editar
+                  </button>{" "}
+                  <button onClick={() => alternarAtivo(u)} disabled={acaoEmAndamento === u.id}>
+                    {u.ativo ? "Desativar" : "Ativar"}
+                  </button>{" "}
+                  <button onClick={() => reenviarConvite(u)} disabled={acaoEmAndamento === u.id}>
+                    Reenviar convite
+                  </button>{" "}
+                  <button onClick={() => excluir(u)} disabled={acaoEmAndamento === u.id} style={{ color: "crimson" }}>
+                    Excluir
+                  </button>
+                </td>
+              </tr>
+            )
+          )}
         </tbody>
       </table>
 
