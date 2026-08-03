@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { traduzirErro } from "../../lib/traduzirErro.js";
 import NavBar from "../../components/NavBar.jsx";
 
 // Valores pro atributo `min` dos inputs de data — impede escolher algo no
@@ -69,7 +70,7 @@ export default function CriarReserva() {
     });
 
     if (error) {
-      alert(error.message);
+      alert(traduzirErro(error.message));
       return;
     }
     navigate("/reservas");
@@ -78,70 +79,74 @@ export default function CriarReserva() {
   return (
     <>
     <NavBar />
-    <main style={{ maxWidth: 400, margin: "40px auto", fontFamily: "sans-serif" }}>
-      <h1>Nova Reserva</h1>
+    <main className="page page--narrow">
+      <h1 className="section">Nova Reserva</h1>
+
       {pontos.length === 0 && (
-        <p style={{ color: "crimson" }}>
+        <p className="form-error">
           Nenhum ponto de carregamento ativo no momento. Fale com o síndico.
         </p>
       )}
-      <form onSubmit={handleSubmit}>
-        <label>
-          Ponto de carregamento
-          <select value={pontoId} onChange={(e) => setPontoId(e.target.value)} required>
-            {pontos.map((p) => (
-              <option key={p.id} value={p.id}>{p.nome}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Tipo
-          <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
-            <option value="diurna">Diurna</option>
-            <option value="noturna">Noturna (bloco fixo de 9h, 21h-06h)</option>
-          </select>
-        </label>
-        {tipo === "diurna" ? (
-          <label>
-            Início
-            <input
-              type="datetime-local"
-              value={inicio}
-              onChange={(e) => setInicio(e.target.value)}
-              min={agoraComoDatetimeLocal()}
-              required
-            />
-          </label>
-        ) : (
-          <label>
-            Dia da reserva
-            <input
-              type="date"
-              value={dataNoturna}
-              onChange={(e) => setDataNoturna(e.target.value)}
-              min={hojeComoData()}
-              required
-            />
-            <small> horário fixo: 21h às 6h do dia seguinte</small>
-          </label>
-        )}
-        {tipo === "diurna" && (
-          <label>
-            Duração (minutos)
-            <input
-              type="number"
-              value={duracao}
-              onChange={(e) => setDuracao(e.target.value)}
-              min={1}
-              max={pontoSelecionado?.duracao_maxima_minutos}
-            />
-            {pontoSelecionado && (
-              <small> máx. {pontoSelecionado.duracao_maxima_minutos} min neste ponto</small>
-            )}
-          </label>
-        )}
-        <button type="submit" disabled={!pontoId}>Confirmar Reserva</button>
-      </form>
+
+      <div className="card">
+        <form onSubmit={handleSubmit} className="stack">
+          <div className="field">
+            Ponto de carregamento
+            <select value={pontoId} onChange={(e) => setPontoId(e.target.value)} required>
+              {pontos.map((p) => (
+                <option key={p.id} value={p.id}>{p.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            Tipo
+            <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+              <option value="diurna">Diurna</option>
+              <option value="noturna">Noturna (bloco fixo de 9h, 21h-06h)</option>
+            </select>
+          </div>
+          {tipo === "diurna" ? (
+            <div className="field">
+              Início
+              <input
+                type="datetime-local"
+                value={inicio}
+                onChange={(e) => setInicio(e.target.value)}
+                min={agoraComoDatetimeLocal()}
+                required
+              />
+            </div>
+          ) : (
+            <div className="field">
+              Dia da reserva
+              <input
+                type="date"
+                value={dataNoturna}
+                onChange={(e) => setDataNoturna(e.target.value)}
+                min={hojeComoData()}
+                required
+              />
+              <small>Horário fixo: 21h às 6h do dia seguinte</small>
+            </div>
+          )}
+          {tipo === "diurna" && (
+            <div className="field">
+              Duração (minutos)
+              <input
+                type="number"
+                value={duracao}
+                onChange={(e) => setDuracao(e.target.value)}
+                min={1}
+                max={pontoSelecionado?.duracao_maxima_minutos}
+              />
+              {pontoSelecionado && (
+                <small>Máx. {pontoSelecionado.duracao_maxima_minutos} min neste ponto</small>
+              )}
+            </div>
+          )}
+          <button type="submit" className="btn btn-primary" disabled={!pontoId}>Confirmar Reserva</button>
+        </form>
+      </div>
     </main>
     </>
   );

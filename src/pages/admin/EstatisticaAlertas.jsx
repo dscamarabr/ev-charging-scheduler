@@ -58,35 +58,39 @@ export default function EstatisticaAlertas() {
   return (
     <>
     <NavBar />
-    <main style={{ maxWidth: 720, margin: "40px auto", fontFamily: "sans-serif" }}>
-      <button onClick={() => navigate("/admin/historico")}>← Voltar</button>
-      <h1>Estatística de Alertas</h1>
+    <main className="page">
+      <button onClick={() => navigate("/admin/historico")} className="btn btn-ghost btn-sm" style={{ marginBottom: 12 }}>
+        ← Voltar
+      </button>
+      <h1 className="section">Estatística de Alertas</h1>
 
-      {meses.length === 0 && <p>Nenhum alerta registrado.</p>}
+      {meses.length === 0 && <p className="empty-state">Nenhum alerta registrado.</p>}
 
       {meses.map((mes) => (
-        <section key={mes} style={{ marginBottom: 32 }}>
+        <section key={mes} className="section">
           <h2>{mesLabel(mes)}</h2>
-          <table width="100%">
-            <thead>
-              <tr>
-                <th>Unidade</th>
-                <th>Enviados</th>
-                <th>Recebidos</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {linhasDoMes(alertasPorMes.get(mes)).map(({ unidade, enviados, recebidos, total }) => (
-                <tr key={unidade.id}>
-                  <td>{unidade.numero}</td>
-                  <td>{enviados}</td>
-                  <td>{recebidos}</td>
-                  <td>{total}</td>
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th style={{ padding: "12px 16px 8px" }}>Unidade</th>
+                  <th>Enviados</th>
+                  <th>Recebidos</th>
+                  <th>Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {linhasDoMes(alertasPorMes.get(mes)).map(({ unidade, enviados, recebidos, total }) => (
+                  <tr key={unidade.id}>
+                    <td style={{ padding: "12px 16px" }}>{unidade.numero}</td>
+                    <td>{enviados}</td>
+                    <td>{recebidos}</td>
+                    <td>{total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       ))}
     </main>

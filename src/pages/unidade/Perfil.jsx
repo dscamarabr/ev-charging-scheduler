@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { traduzirErro } from "../../lib/traduzirErro.js";
 import NavBar from "../../components/NavBar.jsx";
 
 // UC não numerado no scaffold original — tela de autoatendimento pra
@@ -51,7 +52,7 @@ export default function Perfil() {
         .update({ nome_responsavel: nomeResponsavel })
         .eq("id", unidade.id);
       if (error) {
-        setErroPerfil(error.message);
+        setErroPerfil(traduzirErro(error.message));
         return;
       }
       setUnidade({ ...unidade, nome_responsavel: nomeResponsavel });
@@ -91,7 +92,7 @@ export default function Perfil() {
 
       const { error } = await supabase.auth.updateUser({ password: novaSenha });
       if (error) {
-        setErroSenha(error.message);
+        setErroSenha(traduzirErro(error.message));
         return;
       }
       setSenhaAtual("");
@@ -108,75 +109,80 @@ export default function Perfil() {
   return (
     <>
       <NavBar />
-      <main style={{ maxWidth: 400, margin: "40px auto", fontFamily: "sans-serif" }}>
-        <h1>Meu Perfil</h1>
+      <main className="page page--narrow">
+        <h1 className="section">Meu Perfil</h1>
 
-        {!unidade && <p style={{ color: "crimson" }}>Não foi possível carregar os dados da unidade.</p>}
+        {!unidade && <p className="form-error">Não foi possível carregar os dados da unidade.</p>}
 
         {unidade && (
-          <>
-            <form onSubmit={salvarPerfil}>
-              <label>
-                Número da unidade
-                <input value={unidade.numero} disabled />
-              </label>
-              <label>
-                E-mail
-                <input value={unidade.email} disabled />
-              </label>
-              <label>
-                Nome do responsável
-                <input
-                  value={nomeResponsavel}
-                  onChange={(e) => setNomeResponsavel(e.target.value)}
-                  required
-                />
-              </label>
-              {erroPerfil && <p style={{ color: "crimson" }}>{erroPerfil}</p>}
-              {sucessoPerfil && <p style={{ color: "green" }}>Dados atualizados.</p>}
-              <button type="submit" disabled={salvandoPerfil}>
-                {salvandoPerfil ? "Salvando..." : "Salvar dados"}
-              </button>
-            </form>
+          <div className="stack" style={{ gap: 20 }}>
+            <div className="card">
+              <h2>Dados da unidade</h2>
+              <form onSubmit={salvarPerfil} className="stack">
+                <div className="field">
+                  Número da unidade
+                  <input value={unidade.numero} disabled />
+                </div>
+                <div className="field">
+                  E-mail
+                  <input value={unidade.email} disabled />
+                </div>
+                <div className="field">
+                  Nome do responsável
+                  <input
+                    value={nomeResponsavel}
+                    onChange={(e) => setNomeResponsavel(e.target.value)}
+                    required
+                  />
+                </div>
+                {erroPerfil && <p className="form-error">{erroPerfil}</p>}
+                {sucessoPerfil && <p className="form-success">Dados atualizados.</p>}
+                <button type="submit" className="btn btn-primary" disabled={salvandoPerfil}>
+                  {salvandoPerfil ? "Salvando..." : "Salvar dados"}
+                </button>
+              </form>
+            </div>
 
-            <h2>Trocar senha</h2>
-            <form onSubmit={trocarSenha}>
-              <label>
-                Senha atual
-                <input
-                  type="password"
-                  value={senhaAtual}
-                  onChange={(e) => setSenhaAtual(e.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                Nova senha
-                <input
-                  type="password"
-                  value={novaSenha}
-                  onChange={(e) => setNovaSenha(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </label>
-              <label>
-                Confirmar nova senha
-                <input
-                  type="password"
-                  value={confirmarSenha}
-                  onChange={(e) => setConfirmarSenha(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </label>
-              {erroSenha && <p style={{ color: "crimson" }}>{erroSenha}</p>}
-              {sucessoSenha && <p style={{ color: "green" }}>Senha atualizada.</p>}
-              <button type="submit" disabled={salvandoSenha}>
-                {salvandoSenha ? "Salvando..." : "Trocar senha"}
-              </button>
-            </form>
-          </>
+            <div className="card">
+              <h2>Trocar senha</h2>
+              <form onSubmit={trocarSenha} className="stack">
+                <div className="field">
+                  Senha atual
+                  <input
+                    type="password"
+                    value={senhaAtual}
+                    onChange={(e) => setSenhaAtual(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="field">
+                  Nova senha
+                  <input
+                    type="password"
+                    value={novaSenha}
+                    onChange={(e) => setNovaSenha(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <div className="field">
+                  Confirmar nova senha
+                  <input
+                    type="password"
+                    value={confirmarSenha}
+                    onChange={(e) => setConfirmarSenha(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </div>
+                {erroSenha && <p className="form-error">{erroSenha}</p>}
+                {sucessoSenha && <p className="form-success">Senha atualizada.</p>}
+                <button type="submit" className="btn btn-primary" disabled={salvandoSenha}>
+                  {salvandoSenha ? "Salvando..." : "Trocar senha"}
+                </button>
+              </form>
+            </div>
+          </div>
         )}
       </main>
     </>

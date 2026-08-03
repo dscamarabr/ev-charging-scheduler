@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { traduzirErro } from "../../lib/traduzirErro.js";
 
 // Completa o convite enviado por AdminUnidades (via Edge Function `unidades`,
 // que chama `auth.admin.inviteUserByEmail`). O usuário criado por convite
@@ -45,7 +46,7 @@ export default function AceitarConvite() {
       type: "invite",
     });
     if (error) {
-      setErro(error.message);
+      setErro(traduzirErro(error.message));
       return;
     }
     setAutenticado(true);
@@ -66,7 +67,7 @@ export default function AceitarConvite() {
     try {
       const { error } = await supabase.auth.updateUser({ password: senha });
       if (error) {
-        setErro(error.message);
+        setErro(traduzirErro(error.message));
         return;
       }
       navigate("/reservas/nova");
@@ -78,55 +79,66 @@ export default function AceitarConvite() {
   if (verificando) return null;
 
   return (
-    <main style={{ maxWidth: 360, margin: "40px auto", fontFamily: "sans-serif" }}>
-      <h1>Aceitar convite</h1>
+    <main className="page page--narrow" style={{ marginTop: 64 }}>
+      <div className="card">
+        <h1>Aceitar convite</h1>
 
-      {!autenticado && (
-        <>
-          <p>Cole abaixo o código de 6 dígitos que veio no e-mail de convite.</p>
-          <form onSubmit={validarCodigo}>
-            <label>
-              E-mail
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </label>
-            <label>
-              Código
-              <input
-                value={codigo}
-                onChange={(e) => setCodigo(e.target.value)}
-                inputMode="numeric"
-                required
-              />
-            </label>
-            {erro && <p style={{ color: "crimson" }}>{erro}</p>}
-            <button type="submit">Validar código</button>
-          </form>
-        </>
-      )}
+        {!autenticado && (
+          <>
+            <p style={{ color: "var(--color-text-secondary)" }}>
+              Cole abaixo o código de 6 dígitos que veio no e-mail de convite.
+            </p>
+            <form onSubmit={validarCodigo} className="stack">
+              <div className="field">
+                E-mail
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </div>
+              <div className="field">
+                Código
+                <input
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value)}
+                  inputMode="numeric"
+                  required
+                />
+              </div>
+              {erro && <p className="form-error">{erro}</p>}
+              <button type="submit" className="btn btn-primary">Validar código</button>
+            </form>
+            <p style={{ fontSize: 13, marginTop: 20, marginBottom: 0 }}>
+              <Link to="/login">← Voltar para o login</Link>
+            </p>
+          </>
+        )}
 
-      {autenticado && (
-        <>
-          <p>Convite confirmado. Defina sua senha de acesso:</p>
-          <form onSubmit={definirSenha}>
-            <label>
-              Nova senha
-              <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required minLength={6} />
-            </label>
-            <label>
-              Confirmar senha
-              <input
-                type="password"
-                value={confirmarSenha}
-                onChange={(e) => setConfirmarSenha(e.target.value)}
-                required
-                minLength={6}
-              />
-            </label>
-            {erro && <p style={{ color: "crimson" }}>{erro}</p>}
-            <button type="submit" disabled={salvando}>{salvando ? "Salvando..." : "Definir senha e entrar"}</button>
-          </form>
-        </>
-      )}
+        {autenticado && (
+          <>
+            <p style={{ color: "var(--color-text-secondary)" }}>
+              Convite confirmado. Defina sua senha de acesso:
+            </p>
+            <form onSubmit={definirSenha} className="stack">
+              <div className="field">
+                Nova senha
+                <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required minLength={6} />
+              </div>
+              <div className="field">
+                Confirmar senha
+                <input
+                  type="password"
+                  value={confirmarSenha}
+                  onChange={(e) => setConfirmarSenha(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+              {erro && <p className="form-error">{erro}</p>}
+              <button type="submit" className="btn btn-primary" disabled={salvando}>
+                {salvando ? "Salvando..." : "Definir senha e entrar"}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
     </main>
   );
 }

@@ -52,41 +52,51 @@ export default function Alertas() {
   return (
     <>
     <NavBar />
-    <main style={{ maxWidth: 480, margin: "40px auto", fontFamily: "sans-serif" }}>
-      <h1>Alertas</h1>
-      <div>
-        <button onClick={() => setAba("recebidos")} disabled={aba === "recebidos"}>Recebidos</button>{" "}
-        <button onClick={() => setAba("enviados")} disabled={aba === "enviados"}>Enviados</button>
+    <main className="page">
+      <h1 className="section">Alertas</h1>
+      <div className="row" style={{ marginBottom: 20 }}>
+        <button onClick={() => setAba("recebidos")} className={`btn btn-sm ${aba === "recebidos" ? "btn-primary" : "btn-secondary"}`}>
+          Recebidos
+        </button>
+        <button onClick={() => setAba("enviados")} className={`btn btn-sm ${aba === "enviados" ? "btn-primary" : "btn-secondary"}`}>
+          Enviados
+        </button>
       </div>
 
       {aba === "recebidos" && (
-        <>
-          {recebidos.length === 0 && <p>Nenhum alerta recebido no momento.</p>}
+        <div className="stack">
+          {recebidos.length === 0 && <p className="empty-state">Nenhum alerta recebido no momento.</p>}
           {recebidos.map((a) => (
-            <div key={a.id} style={{ border: "1px solid #ccc", padding: 12, marginBottom: 8 }}>
+            <div key={a.id} className="card">
               <strong>Aviso de atraso</strong>
-              <div>Recebido em {formatarDataHora(a.enviado_em)}</div>
-              <div>Visualizado em {formatarDataHora(a.visualizado_em)}</div>
+              <div style={{ color: "var(--color-text-secondary)", fontSize: 14, marginTop: 6 }}>
+                Recebido em {formatarDataHora(a.enviado_em)}
+              </div>
+              <div style={{ color: "var(--color-text-secondary)", fontSize: 14 }}>
+                Visualizado em {formatarDataHora(a.visualizado_em)}
+              </div>
             </div>
           ))}
-        </>
+        </div>
       )}
 
       {aba === "enviados" && (
-        <>
-          {enviados.length === 0 && <p>Você ainda não enviou nenhum alerta.</p>}
+        <div className="stack">
+          {enviados.length === 0 && <p className="empty-state">Você ainda não enviou nenhum alerta.</p>}
           {enviados.map((a) => (
-            <div key={a.id} style={{ border: "1px solid #ccc", padding: 12, marginBottom: 8 }}>
+            <div key={a.id} className="card">
               <strong>Alerta enviado</strong>
-              <div>Enviado em {formatarDataHora(a.enviado_em)}</div>
-              <div>
+              <div style={{ color: "var(--color-text-secondary)", fontSize: 14, marginTop: 6 }}>
+                Enviado em {formatarDataHora(a.enviado_em)}
+              </div>
+              <div style={{ color: "var(--color-text-secondary)", fontSize: 14 }}>
                 {a.visualizado_em
                   ? `Visualizado em ${formatarDataHora(a.visualizado_em)}`
                   : "Ainda não visualizado"}
               </div>
             </div>
           ))}
-        </>
+        </div>
       )}
     </main>
     </>

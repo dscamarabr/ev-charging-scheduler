@@ -62,37 +62,41 @@ export default function EstatisticaReservas() {
   return (
     <>
     <NavBar />
-    <main style={{ maxWidth: 720, margin: "40px auto", fontFamily: "sans-serif" }}>
-      <button onClick={() => navigate("/admin/historico")}>← Voltar</button>
-      <h1>Estatística de Reservas</h1>
+    <main className="page">
+      <button onClick={() => navigate("/admin/historico")} className="btn btn-ghost btn-sm" style={{ marginBottom: 12 }}>
+        ← Voltar
+      </button>
+      <h1 className="section">Estatística de Reservas</h1>
 
-      {meses.length === 0 && <p>Nenhuma reserva registrada.</p>}
+      {meses.length === 0 && <p className="empty-state">Nenhuma reserva registrada.</p>}
 
       {meses.map((mes) => (
-        <section key={mes} style={{ marginBottom: 32 }}>
+        <section key={mes} className="section">
           <h2>{mesLabel(mes)}</h2>
-          <table width="100%">
-            <thead>
-              <tr>
-                <th>Unidade</th>
-                {STATUS_RESERVA.map((s) => (
-                  <th key={s}>{s}</th>
-                ))}
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {linhasDoMes(reservasPorMes.get(mes)).map(({ unidade, contagem, total }) => (
-                <tr key={unidade.id}>
-                  <td>{unidade.numero}</td>
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th style={{ padding: "12px 16px 8px" }}>Unidade</th>
                   {STATUS_RESERVA.map((s) => (
-                    <td key={s}>{contagem[s]}</td>
+                    <th key={s}>{s}</th>
                   ))}
-                  <td>{total}</td>
+                  <th>Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {linhasDoMes(reservasPorMes.get(mes)).map(({ unidade, contagem, total }) => (
+                  <tr key={unidade.id}>
+                    <td style={{ padding: "12px 16px" }}>{unidade.numero}</td>
+                    {STATUS_RESERVA.map((s) => (
+                      <td key={s}>{contagem[s]}</td>
+                    ))}
+                    <td>{total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       ))}
     </main>

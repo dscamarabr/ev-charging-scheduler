@@ -34,6 +34,31 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// As mensagens acima (nossas) já estão em português, mas os erros que
+// vêm do Auth Admin API e do Postgres (authError/unidadeError/deleteError
+// abaixo) chegam em inglês — traduzimos os casos mais comuns antes de
+// interpolar no texto exibido pro síndico. Mesma lista de src/lib/traduzirErro.js
+// (mantida em duplicado aqui porque a Edge Function roda em runtime Deno
+// separado do bundle do frontend).
+function traduzirErroAuth(mensagem: string | undefined): string {
+  if (!mensagem) return "Erro desconhecido";
+  const chave = mensagem.trim().toLowerCase();
+  const mapa: Record<string, string> = {
+    "user already registered": "Este e-mail já está cadastrado no sistema de autenticação.",
+    "unable to validate email address: invalid format": "E-mail em formato inválido.",
+    "email rate limit exceeded": "Limite de envio de e-mails excedido. Tente novamente mais tarde.",
+    "user not found": "Usuário não encontrado.",
+  };
+  if (mapa[chave]) return mapa[chave];
+  if (/duplicate key value violates unique constraint/i.test(mensagem)) {
+    return "Já existe uma unidade cadastrada com esse número ou e-mail.";
+  }
+  if (/for security purposes, you can only request this after/i.test(mensagem)) {
+    return "Por segurança, aguarde alguns instantes antes de tentar novamente.";
+  }
+  return mensagem;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -68,7 +93,7 @@ Deno.serve(async (req) => {
       redirectTo: `${siteUrl}/convite`,
     });
     if (authError) {
-      return json({ error: `Falha ao convidar usuário: ${authError.message}` }, 400);
+      return json({ error: `Falha ao convidar usuário: ${traduzirErroAuth(authError.message)}` }, 400);
     }
 
     const { data: unidade, error: unidadeError } = await supabaseAdmin
@@ -86,7 +111,7 @@ Deno.serve(async (req) => {
     if (unidadeError) {
       // Rollback: sem o usuário órfão no Auth, ele não teria como logar mesmo assim
       await supabaseAdmin.auth.admin.deleteUser(convite.user.id);
-      return json({ error: `Falha ao cadastrar unidade: ${unidadeError.message}` }, 400);
+      return json({ error: `Falha ao cadastrar unidade: ${traduzirErroAuth(unidadeError.message)}` }, 400);
     }
 
     return json({ ok: true, unidade });
@@ -122,14 +147,14 @@ Deno.serve(async (req) => {
     // por isso recriamos a linha logo em seguida com os mesmos dados.
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(unidade.auth_user_id);
     if (deleteError) {
-      return json({ error: `Falha ao invalidar convite anterior: ${deleteError.message}` }, 400);
+      return json({ error: `Falha ao invalidar convite anterior: ${traduzirErroAuth(deleteError.message)}` }, 400);
     }
 
     const { data: convite, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(unidade.email, {
       redirectTo: `${siteUrl}/convite`,
     });
     if (authError) {
-      return json({ error: `Falha ao reenviar convite: ${authError.message}` }, 400);
+      return json({ error: `Falha ao reenviar convite: ${traduzirErroAuth(authError.message)}` }, 400);
     }
 
     const { data: unidadeNova, error: unidadeError } = await supabaseAdmin
@@ -144,7 +169,7 @@ Deno.serve(async (req) => {
       .select()
       .single();
     if (unidadeError) {
-      return json({ error: `Convite reenviado, mas falhou ao recriar a unidade: ${unidadeError.message}` }, 400);
+      return json({ error: `Convite reenviado, mas falhou ao recriar a unidade: ${traduzirErroAuth(unidadeError.message)}` }, 400);
     }
 
     return json({ ok: true, unidade: unidadeNova });
@@ -178,7 +203,7 @@ Deno.serve(async (req) => {
     // (FK auth_user_id ... on delete cascade) e as push_subscription dela.
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(unidade.auth_user_id);
     if (deleteError) {
-      return json({ error: `Falha ao excluir: ${deleteError.message}` }, 400);
+      return json({ error: `Falha ao excluir: ${traduzirErroAuth(deleteError.message)}` }, 400);
     }
 
     return json({ ok: true });
