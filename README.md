@@ -175,32 +175,94 @@ migrations a cada push em `main` ou `staging`. Configure estes secrets em
 ```
 supabase/
   migrations/
-    0001_schema_inicial.sql   — tabelas, constraints (RI-01 a RI-07), RLS, RPCs
-    0002_scheduled_jobs.sql   — pg_cron: liberação automática + gatilho de notificações
+    0001_schema_inicial.sql                       — tabelas, constraints (RI-01 a RI-07), RLS, RPCs
+    0002_scheduled_jobs.sql                        — pg_cron: liberação automática + gatilho de notificações
+    0003_fix_timezone_criar_reserva.sql
+    0004_fix_disparar_alerta_status.sql
+    0005_fix_disparar_alerta_janela_tolerancia.sql
+    0006_fix_criar_reserva_no_passado.sql
+    0007_remove_codigos_regra_das_mensagens.sql    — mensagens de erro sem código interno (RN-xx) pro usuário final
+    0008_ponto_delete_policy.sql                   — RLS de delete em ponto_carregamento (faltava)
   functions/
-    send-push/                — envia o Web Push (RF-23, RF-24)
-    alertas/                  — disparo/leitura do alerta anônimo (RNF-08)
+    send-push/    — envia o Web Push (RF-23, RF-24) — envio real ainda comentado, ver seção 8
+    alertas/       — disparo/leitura do alerta anônimo (RNF-08)
+    unidades/      — cadastro de unidade (cria conta no Auth + linha em `unidade`)
   config.toml
 
 src/
-  lib/supabaseClient.js
+  components/  — NavBar, RequireAuth, StatusBadge (StatusBadge/AtivoBadge), Breadcrumb
+  lib/         — supabaseClient, traduzirErro, formatarDataHora, mesUtil, compararNumero, telaInicial
+  styles/theme.css   — sistema de design "Acolhedor" (cores, componentes reutilizáveis — ver seção 8.1)
   pages/
-    unidade/   — Login, Home, CriarReserva, MinhasReservas, Alertas
-    admin/     — Unidades, Pontos, Historico
+    unidade/   — Login, AceitarConvite, CriarReserva (tela "Agendar"), MinhasReservas, Alertas, Perfil
+    admin/     — AdminHome (hub), Unidades, NovaUnidade, Pontos, NovoPonto, Historico, Estatistica
   App.jsx, main.jsx
 ```
 
 ## 8. O que ainda falta (TODOs conhecidos)
 
-- Edge Function de cadastro de unidade (cria conta no Supabase Auth + linha
-  em `unidade`) — hoje é só um `alert()` em `AdminUnidades.jsx`.
-- Envio real do Web Push em `send-push/index.ts` (lib comentada).
-- Seletor de ponto de carregamento em `CriarReserva.jsx` (hoje é um
-  placeholder de texto).
-- Testes automatizados (nenhum incluído neste scaffold).
+Em ordem de prioridade prática:
+
+1. **Deploy real** — hoje tudo roda contra Supabase local (`127.0.0.1`); não
+   há projeto Supabase remoto configurado nem frontend hospedado. É pré-
+   requisito pra testar em celular (iOS só recebe push com o site instalado
+   via HTTPS, ver seção 4) — seguir seções 3, 5 e 6 deste README.
+2. **Push notifications** — infraestrutura pronta (tabela `push_subscription`,
+   job que decide quando notificar, Edge Function `send-push`), mas falta:
+   - Código no frontend que pede permissão e chama
+     `pushManager.subscribe()` (não existe ainda em nenhuma tela).
+   - Descomentar/ajustar o envio real (`web-push`) em `send-push/index.ts`.
+   - Gerar e configurar as chaves VAPID reais (`npx web-push generate-vapid-keys`).
+3. Testes automatizados — nenhum incluído; dado o escopo (uso interno de um
+   condomínio, sem transação financeira no próprio app), baixa prioridade
+   pra v1.
+
+Já resolvido nesta rodada (não é mais TODO): cadastro de unidade via Edge
+Function, seletor de ponto de carregamento em "Agendar", badge "Inativo",
+ordenação numérica de unidades.
+
+### 8.1 Padrões de UI estabelecidos ("padrão" do projeto)
+
+Pra manter consistência visual/funcional ao continuar o desenvolvimento
+(inclusive em outra conversa/chat), estes são os componentes e convenções já
+adotados em todas as telas — reaproveitar em vez de criar variações novas:
+
+- **Listagem de registros**: card de linha com ícone circular + título/
+  subtítulo + chevron (classe `.horario-item`, clicável) ou sem chevron pra
+  itens não-clicáveis (`.historico-item`). Usado em Agendar, Histórico,
+  Estatística.
+- **Cadastro de item novo**: nunca inline no fim da lista — sempre em rota
+  própria (`/admin/X/novo`), acessada por um botão de ícone (`.icon-btn-primary`,
+  círculo preenchido com ícone + "badge cutout" de +) no cabeçalho da lista.
+  Ver Unidades/NovaUnidade e Pontos/NovoPonto.
+- **Ação secundária só com ícone**: `.icon-btn` (círculo outline 28px) —
+  usado por ex. no "reenviar convite" e no toggle de ordenação da Estatística.
+- **Abas de navegação dentro de uma tela**: segmented control
+  (`.tabs-segmented` / `.tabs-segmented-btn`, com ícone + label), não
+  `btn-primary`/`btn-secondary` lado a lado. Ver Histórico, Estatística,
+  Alertas.
+- **Filtros e ordenação**: cartão recolhível, fechado por padrão
+  (`.filtros-toggle` + `.filtros-grid`, campos com label em cima do input).
+  Ver Histórico.
+- **Detalhes de um registro**: modal (`.modal-overlay` / `.modal-card`) em
+  vez de expandir a linha ou navegar pra outra tela.
+- **Ordenação de unidades**: sempre crescente, número antes de letras (ex.
+  "ADM" vem depois de qualquer número) — usar `compararNumero` de
+  `src/lib/compararNumero.js`, nunca `.order("numero")` puro do Supabase
+  (texto ordena como string).
+- **Breadcrumb**: toda tela administrativa tem `<Breadcrumb itens={[...]} />`
+  voltando pro hub `/admin`.
+- **Badges de status**: `StatusBadge`/`AtivoBadge` em
+  `src/components/StatusBadge.jsx` — não recriar badges inline.
+- **Ícones SVG**: sempre com `stroke="currentColor"` explícito (sem isso o
+  ícone renderiza invisível — bug que já se repetiu duas vezes no projeto).
 
 ## 9. Documentos de referência
 
-Todos em `/mnt/project` (ou onde vocês estiverem versionando os docs):
 Documento de Visão, Especificação de Requisitos, Modelo de Dados, Casos de
-Uso/User Stories, Wireframes, Arquitetura Técnica — todos v1.0.
+Uso/User Stories, Wireframes, Arquitetura Técnica — todos v1.0. Hoje existem
+como `.docx` fora deste repositório (pasta irmã `Ponto de Carregamento/`,
+fora de `ev-charging-scheduler/`), não versionados em Git. As regras de
+negócio neles definidas (RN-01 a RN-09 etc.) são tratadas como fechadas —
+qualquer mudança nelas deve ser explicitamente revisada antes de alterar
+código.
