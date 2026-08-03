@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { traduzirErro } from "../../lib/traduzirErro.js";
+import { obterTelaInicial } from "../../lib/telaInicial.js";
 
 // Completa o convite enviado por AdminUnidades (via Edge Function `unidades`,
 // que chama `auth.admin.inviteUserByEmail`). O usuário criado por convite
@@ -70,7 +71,7 @@ export default function AceitarConvite() {
         setErro(traduzirErro(error.message));
         return;
       }
-      navigate("/reservas/nova");
+      navigate(await obterTelaInicial());
     } finally {
       setSalvando(false);
     }
@@ -81,7 +82,11 @@ export default function AceitarConvite() {
   return (
     <main className="page page--narrow" style={{ marginTop: 64 }}>
       <div className="card">
-        <h1>Aceitar convite</h1>
+        <img
+          src="/img/grand-soleil-logo.png"
+          alt="Grand Soleil"
+          style={{ display: "block", width: "100%", maxWidth: 220, margin: "0 auto 20px", borderRadius: "var(--radius)" }}
+        />
 
         {!autenticado && (
           <>

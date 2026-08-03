@@ -15,7 +15,7 @@ export function StatusBadge({ status }) {
 
 export function AtivoBadge({ ativo }) {
   return (
-    <span className={`badge ${ativo ? "badge-success" : "badge-neutral"}`}>
+    <span className={`badge ${ativo ? "badge-success" : "badge-danger"}`}>
       {ativo ? "Ativo" : "Inativo"}
     </span>
   );

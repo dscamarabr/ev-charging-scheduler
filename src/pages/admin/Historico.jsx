@@ -1,35 +1,49 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { formatarDataHora } from "../../lib/formatarDataHora.js";
 import { StatusBadge } from "../../components/StatusBadge.jsx";
+import { compararNumero } from "../../lib/compararNumero.js";
 import NavBar from "../../components/NavBar.jsx";
+import Breadcrumb from "../../components/Breadcrumb.jsx";
 
 // UC-14 — Consultar Histórico Administrativo (RF-26, RF-27)
-const STATUS_RESERVA = ["confirmada", "em_andamento", "concluida", "cancelada"];
+const STATUS_RESERVA = [
+  { valor: "confirmada", texto: "Confirmada" },
+  { valor: "em_andamento", texto: "Em andamento" },
+  { valor: "concluida", texto: "Concluída" },
+  { valor: "cancelada", texto: "Cancelada" },
+];
 
 export default function AdminHistorico() {
-  const navigate = useNavigate();
   const [aba, setAba] = useState("reservas");
   const [reservas, setReservas] = useState([]);
   const [alertas, setAlertas] = useState([]);
   const [unidades, setUnidades] = useState([]);
+  const [pontos, setPontos] = useState([]);
 
   const [filtroUnidadeId, setFiltroUnidadeId] = useState("");
+  const [filtroPontoId, setFiltroPontoId] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [ordenarPor, setOrdenarPor] = useState("inicio"); // "inicio" | "fim"
   const [ordemAsc, setOrdemAsc] = useState(false);
+  const [registroSelecionado, setRegistroSelecionado] = useState(null);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
 
   const [filtroSolicitanteId, setFiltroSolicitanteId] = useState("");
   const [filtroSolicitadaId, setFiltroSolicitadaId] = useState("");
   const [ordemAscAlertas, setOrdemAscAlertas] = useState(false);
+  const [alertaSelecionado, setAlertaSelecionado] = useState(null);
 
   useEffect(() => {
     supabase
       .from("unidade")
       .select("id, numero")
-      .order("numero")
-      .then(({ data }) => setUnidades(data ?? []));
+      .then(({ data }) => setUnidades((data ?? []).sort((a, b) => compararNumero(a.numero, b.numero))));
+    supabase
+      .from("ponto_carregamento")
+      .select("id, nome")
+      .order("nome")
+      .then(({ data }) => setPontos(data ?? []));
   }, []);
 
   useEffect(() => {
@@ -38,6 +52,7 @@ export default function AdminHistorico() {
         .from("reserva")
         .select("*, unidade(numero), ponto_carregamento(nome)");
       if (filtroUnidadeId) query = query.eq("unidade_id", filtroUnidadeId);
+      if (filtroPontoId) query = query.eq("ponto_id", filtroPontoId);
       if (filtroStatus) query = query.eq("status", filtroStatus);
       query.then(({ data }) => setReservas(data ?? []));
     } else {
@@ -59,7 +74,7 @@ export default function AdminHistorico() {
         .order("enviado_em", { ascending: ordemAscAlertas })
         .then(({ data }) => setAlertas(data ?? []));
     }
-  }, [aba, filtroUnidadeId, filtroStatus, filtroSolicitanteId, filtroSolicitadaId, ordemAscAlertas]);
+  }, [aba, filtroUnidadeId, filtroPontoId, filtroStatus, filtroSolicitanteId, filtroSolicitadaId, ordemAscAlertas]);
 
   // Ordenação por "Fim" precisa ser client-side: a coluna exibida é
   // fim_real quando existe, senão fim_previsto (valor calculado, não dá
@@ -76,139 +91,295 @@ export default function AdminHistorico() {
     <>
     <NavBar />
     <main className="page">
+      <Breadcrumb itens={[{ texto: "Admin", to: "/admin" }, { texto: "Histórico Administrativo" }]} />
       <h1 className="section">Histórico Administrativo</h1>
 
-      <div className="row row--between" style={{ marginBottom: 20 }}>
-        <div className="row">
-          <button onClick={() => setAba("reservas")} className={`btn btn-sm ${aba === "reservas" ? "btn-primary" : "btn-secondary"}`}>
-            Reservas
-          </button>
-          <button onClick={() => setAba("alertas")} className={`btn btn-sm ${aba === "alertas" ? "btn-primary" : "btn-secondary"}`}>
-            Alertas de Atraso
-          </button>
-        </div>
-        {aba === "reservas" ? (
-          <button onClick={() => navigate("/admin/estatistica-reservas")} className="btn btn-secondary btn-sm">
-            Ver estatística de reservas
-          </button>
-        ) : (
-          <button onClick={() => navigate("/admin/estatistica-alertas")} className="btn btn-secondary btn-sm">
-            Ver estatística de alertas
-          </button>
-        )}
+      <div className="tabs-segmented" style={{ marginBottom: 20 }}>
+        <button
+          type="button"
+          onClick={() => setAba("reservas")}
+          className={`tabs-segmented-btn${aba === "reservas" ? " is-ativo" : ""}`}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18" />
+          </svg>
+          Reservas
+        </button>
+        <button
+          type="button"
+          onClick={() => setAba("alertas")}
+          className={`tabs-segmented-btn${aba === "alertas" ? " is-ativo" : ""}`}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          Alertas
+        </button>
       </div>
 
       {aba === "reservas" && (
         <>
-          <div className="row" style={{ marginBottom: 16 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 400 }}>
-              Unidade
-              <select value={filtroUnidadeId} onChange={(e) => setFiltroUnidadeId(e.target.value)} style={{ height: 32 }}>
-                <option value="">Todas</option>
-                {unidades.map((u) => (
-                  <option key={u.id} value={u.id}>{u.numero}</option>
-                ))}
-              </select>
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 400 }}>
-              Status
-              <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} style={{ height: 32 }}>
-                <option value="">Todos</option>
-                {STATUS_RESERVA.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 400 }}>
-              Ordenar por
-              <select value={ordenarPor} onChange={(e) => setOrdenarPor(e.target.value)} style={{ height: 32 }}>
-                <option value="inicio">Início</option>
-                <option value="fim">Fim</option>
-              </select>
-            </label>
-            <button onClick={() => setOrdemAsc((atual) => !atual)} className="btn btn-secondary btn-sm">
-              {ordemAsc ? "Crescente ↑" : "Decrescente ↓"}
+          <div className="card" style={{ marginBottom: 20 }}>
+            <button type="button" className="filtros-toggle" onClick={() => setFiltrosAbertos((atual) => !atual)}>
+              <span>Filtros e ordenação</span>
+              <svg className={`filtros-toggle-chevron${filtrosAbertos ? " is-aberto" : ""}`} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
             </button>
+            {filtrosAbertos && (
+              <div className="filtros-grid" style={{ marginTop: 16 }}>
+                <div className="field">
+                  Unidade
+                  <select value={filtroUnidadeId} onChange={(e) => setFiltroUnidadeId(e.target.value)}>
+                    <option value="">Todas</option>
+                    {unidades.map((u) => (
+                      <option key={u.id} value={u.id}>{u.numero}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  Ponto
+                  <select value={filtroPontoId} onChange={(e) => setFiltroPontoId(e.target.value)}>
+                    <option value="">Todos</option>
+                    {pontos.map((p) => (
+                      <option key={p.id} value={p.id}>{p.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  Status
+                  <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
+                    <option value="">Todos</option>
+                    {STATUS_RESERVA.map((s) => (
+                      <option key={s.valor} value={s.valor}>{s.texto}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  Ordenar por
+                  <div className="row" style={{ flexWrap: "nowrap" }}>
+                    <select value={ordenarPor} onChange={(e) => setOrdenarPor(e.target.value)} style={{ flex: 1 }}>
+                      <option value="inicio">Início</option>
+                      <option value="fim">Fim</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setOrdemAsc((atual) => !atual)}
+                      className="btn btn-secondary"
+                      style={{ flexShrink: 0, paddingLeft: 14, paddingRight: 14 }}
+                      title={ordemAsc ? "Ordem crescente" : "Ordem decrescente"}
+                      aria-label="Alternar ordem"
+                    >
+                      {ordemAsc ? "↑" : "↓"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th style={{ padding: "12px 16px 8px" }}>Unidade</th>
-                  <th>Ponto</th>
-                  <th>Tipo</th>
-                  <th>Início</th>
-                  <th>Fim</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reservasOrdenadas.map((r) => (
-                  <tr key={r.id}>
-                    <td style={{ padding: "12px 16px" }}>{r.unidade?.numero}</td>
-                    <td>{r.ponto_carregamento?.nome}</td>
-                    <td>{r.tipo}</td>
-                    <td>{formatarDataHora(r.inicio_previsto)}</td>
-                    <td>{formatarDataHora(r.fim_real ?? r.fim_previsto)}</td>
-                    <td><StatusBadge status={r.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="stack">
+            {reservasOrdenadas.length === 0 && (
+              <p style={{ color: "var(--color-text-muted)" }}>Nenhum registro encontrado.</p>
+            )}
+            {reservasOrdenadas.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                className="horario-item"
+                onClick={() => setRegistroSelecionado(r)}
+              >
+                <div className="horario-item-icone">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <path d="M16 2v4M8 2v4M3 10h18" />
+                  </svg>
+                </div>
+                <div className="horario-item-texto">
+                  <span className="horario-item-titulo">
+                    Unidade {r.unidade?.numero}
+                  </span>
+                  <span className="horario-item-sub">{formatarDataHora(r.inicio_previsto)}</span>
+                </div>
+                <StatusBadge status={r.status} />
+                <svg className="horario-item-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+              </button>
+            ))}
           </div>
         </>
       )}
 
       {aba === "alertas" && (
         <>
-          <div className="row" style={{ marginBottom: 16 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 400 }}>
-              Unidade solicitante
-              <select value={filtroSolicitanteId} onChange={(e) => setFiltroSolicitanteId(e.target.value)} style={{ height: 32 }}>
-                <option value="">Todas</option>
-                {unidades.map((u) => (
-                  <option key={u.id} value={u.id}>{u.numero}</option>
-                ))}
-              </select>
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 400 }}>
-              Unidade solicitada
-              <select value={filtroSolicitadaId} onChange={(e) => setFiltroSolicitadaId(e.target.value)} style={{ height: 32 }}>
-                <option value="">Todas</option>
-                {unidades.map((u) => (
-                  <option key={u.id} value={u.id}>{u.numero}</option>
-                ))}
-              </select>
-            </label>
-            <button onClick={() => setOrdemAscAlertas((atual) => !atual)} className="btn btn-secondary btn-sm">
-              Enviado em: {ordemAscAlertas ? "Crescente ↑" : "Decrescente ↓"}
+          <div className="card" style={{ marginBottom: 20 }}>
+            <button type="button" className="filtros-toggle" onClick={() => setFiltrosAbertos((atual) => !atual)}>
+              <span>Filtros e ordenação</span>
+              <svg className={`filtros-toggle-chevron${filtrosAbertos ? " is-aberto" : ""}`} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
             </button>
+            {filtrosAbertos && (
+              <div className="filtros-grid" style={{ marginTop: 16 }}>
+                <div className="field">
+                  Unidade solicitante
+                  <select value={filtroSolicitanteId} onChange={(e) => setFiltroSolicitanteId(e.target.value)}>
+                    <option value="">Todas</option>
+                    {unidades.map((u) => (
+                      <option key={u.id} value={u.id}>{u.numero}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  Unidade solicitada
+                  <select value={filtroSolicitadaId} onChange={(e) => setFiltroSolicitadaId(e.target.value)}>
+                    <option value="">Todas</option>
+                    {unidades.map((u) => (
+                      <option key={u.id} value={u.id}>{u.numero}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  Enviado em
+                  <button
+                    type="button"
+                    onClick={() => setOrdemAscAlertas((atual) => !atual)}
+                    className="btn btn-secondary"
+                    style={{ justifyContent: "center" }}
+                  >
+                    {ordemAscAlertas ? "↑ Crescente" : "↓ Decrescente"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th style={{ padding: "12px 16px 8px" }}>Unidade Solicitante</th>
-                  <th>Unidade Solicitada</th>
-                  <th>Enviado em</th>
-                  <th>Visualizado em</th>
-                </tr>
-              </thead>
-              <tbody>
-                {alertas.map((a) => (
-                  <tr key={a.id}>
-                    <td style={{ padding: "12px 16px" }}>{a.unidade_solicitante?.numero}</td>
-                    <td>{a.reserva?.unidade?.numero}</td>
-                    <td>{formatarDataHora(a.enviado_em)}</td>
-                    <td>{a.visualizado_em ? formatarDataHora(a.visualizado_em) : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="stack">
+            {alertas.length === 0 && (
+              <p style={{ color: "var(--color-text-muted)" }}>Nenhum registro encontrado.</p>
+            )}
+            {alertas.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                className="horario-item"
+                onClick={() => setAlertaSelecionado(a)}
+              >
+                <div className="horario-item-icone">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                </div>
+                <div className="horario-item-texto">
+                  <span className="horario-item-titulo">
+                    Unidade {a.unidade_solicitante?.numero} → Unidade {a.reserva?.unidade?.numero}
+                  </span>
+                  <span className="horario-item-sub">Enviado em {formatarDataHora(a.enviado_em)}</span>
+                </div>
+                <svg className="horario-item-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+              </button>
+            ))}
           </div>
         </>
+      )}
+
+      {registroSelecionado && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setRegistroSelecionado(null);
+          }}
+        >
+          <div className="modal-card">
+            <div className="row row--between" style={{ alignItems: "center", marginBottom: 4 }}>
+              <h2 className="section" style={{ marginTop: 0, marginBottom: 0 }}>Detalhes da Reserva</h2>
+              <StatusBadge status={registroSelecionado.status} />
+            </div>
+
+            <div className="stack" style={{ marginTop: 16 }}>
+              <div className="row row--between">
+                <span style={{ color: "var(--color-text-muted)" }}>Unidade</span>
+                <strong>{registroSelecionado.unidade?.numero}</strong>
+              </div>
+              <div className="row row--between">
+                <span style={{ color: "var(--color-text-muted)" }}>Ponto</span>
+                <strong>{registroSelecionado.ponto_carregamento?.nome}</strong>
+              </div>
+              <div className="row row--between">
+                <span style={{ color: "var(--color-text-muted)" }}>Tipo</span>
+                <strong style={{ textTransform: "capitalize" }}>{registroSelecionado.tipo}</strong>
+              </div>
+              <div className="row row--between">
+                <span style={{ color: "var(--color-text-muted)" }}>Início previsto</span>
+                <strong>{formatarDataHora(registroSelecionado.inicio_previsto)}</strong>
+              </div>
+              <div className="row row--between">
+                <span style={{ color: "var(--color-text-muted)" }}>Fim previsto</span>
+                <strong>{formatarDataHora(registroSelecionado.fim_previsto)}</strong>
+              </div>
+              {registroSelecionado.fim_real && (
+                <div className="row row--between">
+                  <span style={{ color: "var(--color-text-muted)" }}>Fim real</span>
+                  <strong>{formatarDataHora(registroSelecionado.fim_real)}</strong>
+                </div>
+              )}
+              <div className="row row--between">
+                <span style={{ color: "var(--color-text-muted)" }}>Criado em</span>
+                <strong>{formatarDataHora(registroSelecionado.criado_em)}</strong>
+              </div>
+            </div>
+
+            <div className="row" style={{ marginTop: 20 }}>
+              <button type="button" onClick={() => setRegistroSelecionado(null)} className="btn btn-secondary" style={{ flex: 1 }}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {alertaSelecionado && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setAlertaSelecionado(null);
+          }}
+        >
+          <div className="modal-card">
+            <h2 className="section" style={{ marginTop: 0 }}>Detalhes do Alerta</h2>
+
+            <div className="stack" style={{ marginTop: 16 }}>
+              <div className="row row--between">
+                <span style={{ color: "var(--color-text-muted)" }}>Unidade solicitante</span>
+                <strong>{alertaSelecionado.unidade_solicitante?.numero}</strong>
+              </div>
+              <div className="row row--between">
+                <span style={{ color: "var(--color-text-muted)" }}>Unidade solicitada</span>
+                <strong>{alertaSelecionado.reserva?.unidade?.numero}</strong>
+              </div>
+              <div className="row row--between">
+                <span style={{ color: "var(--color-text-muted)" }}>Enviado em</span>
+                <strong>{formatarDataHora(alertaSelecionado.enviado_em)}</strong>
+              </div>
+              <div className="row row--between">
+                <span style={{ color: "var(--color-text-muted)" }}>Visualizado em</span>
+                <strong>{alertaSelecionado.visualizado_em ? formatarDataHora(alertaSelecionado.visualizado_em) : "—"}</strong>
+              </div>
+            </div>
+
+            <div className="row" style={{ marginTop: 20 }}>
+              <button type="button" onClick={() => setAlertaSelecionado(null)} className="btn btn-secondary" style={{ flex: 1 }}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
     </>

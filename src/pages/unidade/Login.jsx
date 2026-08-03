@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { traduzirErro } from "../../lib/traduzirErro.js";
+import { obterTelaInicial } from "../../lib/telaInicial.js";
 
 // UC-02 — Autenticar-se no sistema (RF-02)
 export default function Login() {
@@ -18,15 +19,19 @@ export default function Login() {
       setErro(traduzirErro(error.message));
       return;
     }
-    navigate("/reservas/nova");
+    navigate(await obterTelaInicial());
   }
 
   return (
     <main className="page page--narrow" style={{ marginTop: 64 }}>
       <div className="card">
-        <h1>Entrar</h1>
+        <img
+          src="/img/grand-soleil-logo.png"
+          alt="Grand Soleil"
+          style={{ display: "block", width: "100%", maxWidth: 260, margin: "0 auto 20px", borderRadius: "var(--radius)" }}
+        />
         <p style={{ color: "var(--color-text-secondary)", marginBottom: 20 }}>
-          Agendamento de carregamento do condomínio
+          Agendamento de carregamento do condomínio Grand Soleil
         </p>
         <form onSubmit={handleSubmit} className="stack">
           <div className="field">
@@ -41,7 +46,7 @@ export default function Login() {
           <button type="submit" className="btn btn-primary">Entrar</button>
         </form>
         <p style={{ fontSize: 13, marginTop: 20, marginBottom: 0 }}>
-          Recebeu um convite do síndico? <Link to="/convite">Aceitar convite / definir senha</Link>
+          Recebeu um convite do síndico? <Link to="/convite">Aceitar convite</Link>
         </p>
       </div>
     </main>

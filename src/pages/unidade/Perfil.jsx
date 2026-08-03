@@ -117,7 +117,18 @@ export default function Perfil() {
         {unidade && (
           <div className="stack" style={{ gap: 20 }}>
             <div className="card">
-              <h2>Dados da unidade</h2>
+              <div className="card-header">
+                <span className="card-header-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 11l9-7 9 7" />
+                    <path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" />
+                  </svg>
+                </span>
+                <div>
+                  <h2>Dados da unidade</h2>
+                  <p className="card-header-subtitle">Informações que identificam sua unidade no condomínio</p>
+                </div>
+              </div>
               <form onSubmit={salvarPerfil} className="stack">
                 <div className="field">
                   Número da unidade
@@ -144,7 +155,18 @@ export default function Perfil() {
             </div>
 
             <div className="card">
-              <h2>Trocar senha</h2>
+              <div className="card-header">
+                <span className="card-header-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="4" y="11" width="16" height="9" rx="2" />
+                    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                  </svg>
+                </span>
+                <div>
+                  <h2>Trocar senha</h2>
+                  <p className="card-header-subtitle">Defina uma nova senha de acesso</p>
+                </div>
+              </div>
               <form onSubmit={trocarSenha} className="stack">
                 <div className="field">
                   Senha atual

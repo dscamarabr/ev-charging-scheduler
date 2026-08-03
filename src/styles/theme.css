@@ -1,20 +1,22 @@
 /* =====================================================================
    Sistema de design — tema "Acolhedor" (opção B escolhida pelo síndico)
-   Paleta terracota/coral, cantos bem arredondados (12px), tom amigável
-   e residencial. Cores de status (sucesso/aviso/perigo) ficam separadas
-   da cor de marca para não confundir "unidade" com "situação".
+   Estrutura clara e cantos bem arredondados (12px) mantidos; a cor de
+   marca foi trocada do coral original para o dourado-oliva extraído da
+   logo do Grand Soleil, aplicado nos botões/links/destaques. Cores de
+   status (sucesso/aviso/perigo) ficam separadas da cor de marca para
+   não confundir "unidade" com "situação".
    ===================================================================== */
 
 :root {
-  /* Marca — coral */
-  --color-primary-50: #FAECE7;
-  --color-primary-100: #F5C4B3;
-  --color-primary-200: #F0997B;
-  --color-primary-400: #D85A30;
-  --color-primary-600: #993C1D;
-  --color-primary-700: #802F16;
-  --color-primary-800: #712B13;
-  --color-primary-900: #4A1B0C;
+  /* Marca — dourado-oliva (logo Grand Soleil) */
+  --color-primary-50: #F8F5E7;
+  --color-primary-100: #EEE5C3;
+  --color-primary-200: #E0CF90;
+  --color-primary-400: #CDB24C;
+  --color-primary-600: #B59A33;
+  --color-primary-700: #877326;
+  --color-primary-800: #67581D;
+  --color-primary-900: #403612;
 
   /* Neutros — cinza com fundo quente */
   --color-gray-50: #F8F6F2;
@@ -143,6 +145,21 @@ small {
   justify-content: space-between;
 }
 
+/* Linha de ações do card de reserva (Liberar agora / Solicitar retirada) —
+   não pode quebrar em linhas separadas mesmo com o rótulo mais longo; os
+   botões dividem o espaço e o próprio texto quebra dentro deles. */
+.row--acoes {
+  flex-wrap: nowrap;
+}
+
+.row--acoes .btn {
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
+}
+
 /* Cartões ----------------------------------------------------------- */
 
 .card {
@@ -151,6 +168,179 @@ small {
   border-radius: var(--radius);
   padding: 16px 20px;
   box-shadow: var(--shadow-card);
+}
+
+/* Destaque pra reserva ativa (confirmada/em andamento) em Minhas Reservas
+   — tarja lateral + fundo levemente tingido, mesmo padrão usado nas
+   linhas em destaque da tela de Alertas. */
+.card-destaque {
+  background: var(--color-primary-50);
+  border-color: var(--color-primary-200);
+  border-left-width: 4px;
+  border-left-color: var(--color-primary-600);
+  padding-left: 17px;
+}
+
+/* Card "hero" da reserva ativa/confirmada (Minhas Reservas) -------------
+   Fundo primary-800 (mais escuro que o dos botões normais) escolhido de
+   propósito: dá ~7:1 de contraste com texto/ícones brancos, garantindo
+   que os botões e o badge não percam destaque em cima da cor de marca. */
+.reserva-hero {
+  background: var(--color-primary-800);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 22px 20px;
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+.reserva-hero-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-primary-100);
+  margin-bottom: 8px;
+}
+
+.reserva-hero-titulo {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.reserva-hero .badge {
+  /* Opacidade baixa de propósito: um branco mais forte clareia demais o
+     fundo e derruba o contraste do próprio texto branco do badge. */
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+
+.reserva-hero-horario {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin: 14px 0 4px;
+}
+
+.reserva-hero-progresso-track {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.28);
+  margin-top: 14px;
+  overflow: hidden;
+}
+
+.reserva-hero-progresso-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: #fff;
+}
+
+.reserva-hero-progresso-legenda {
+  font-size: 12px;
+  color: var(--color-primary-100);
+  margin-top: 8px;
+}
+
+.reserva-hero-acoes {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.reserva-hero-acoes .btn {
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  height: auto;
+  min-height: 40px;
+  padding: 8px 14px;
+}
+
+/* .btn base (mais abaixo neste arquivo) define border: 1px solid
+   transparent — como tem a mesma especificidade de uma classe só, ele
+   venceria essas regras por vir depois na cascata. Usar `.btn.classe`
+   aqui garante especificidade maior, então a borda aparece de verdade. */
+.btn.reserva-hero-btn-primario {
+  background: #fff;
+  color: var(--color-primary-800);
+  border: 1px solid #fff;
+}
+
+.btn.reserva-hero-btn-primario:hover {
+  background: var(--color-primary-50);
+}
+
+.btn.reserva-hero-btn-secundario {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.btn.reserva-hero-btn-secundario:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.btn.reserva-hero-btn-cancelar {
+  background: #fff;
+  color: var(--color-danger-text);
+  border: 1px solid #fff;
+}
+
+.btn.reserva-hero-btn-cancelar:hover {
+  background: var(--color-danger-bg);
+}
+
+/* Histórico compacto (Minhas Reservas) ---------------------------------- */
+
+.historico-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+}
+
+.historico-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.historico-item-icone {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-gray-100);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.historico-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.historico-item-info strong {
+  display: block;
+  font-size: 14px;
+}
+
+.historico-item-sub {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
 }
 
 /* Formulários --------------------------------------------------------- */
@@ -162,6 +352,82 @@ small {
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text-secondary);
+}
+
+/* Cartão de filtros/ordenação (Histórico Administrativo e telas afins) —
+   grid responsivo de campos rotulados, no lugar da linha de <select>s
+   compactos que quebrava sem alinhamento nenhum. */
+.filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+/* Cabeçalho clicável que expande/recolhe o cartão de filtros — fechado
+   por padrão, pra não competir visualmente com a lista de registros. */
+.filtros-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.filtros-toggle-chevron {
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+  transform: rotate(90deg);
+}
+
+.filtros-toggle-chevron.is-aberto {
+  transform: rotate(-90deg);
+}
+
+/* Alternador de abas em "segmented control" (Histórico Administrativo) —
+   visualmente distinto dos botões retangulares de filtro/ação, pra deixar
+   claro que troca o conteúdo inteiro da tela, não é mais um filtro. */
+.tabs-segmented {
+  display: flex;
+  gap: 4px;
+  background: var(--color-gray-100);
+  border-radius: var(--radius);
+  padding: 4px;
+}
+
+.tabs-segmented-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--radius) - 4px);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tabs-segmented-btn.is-ativo {
+  background: var(--color-surface);
+  color: var(--color-primary-700);
+  box-shadow: var(--shadow-card);
+}
+
+.tabs-segmented-btn svg {
+  flex-shrink: 0;
 }
 
 input,
@@ -193,6 +459,366 @@ textarea:focus {
 
 input::placeholder {
   color: var(--color-text-muted);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: var(--color-gray-100);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  cursor: not-allowed;
+}
+
+/* Agendamento (Nova Reserva) — chips de dia e lista de horários --------- */
+
+.chips-dia {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 14px;
+  margin-bottom: -6px;
+}
+
+.chip-dia {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip-dia:hover {
+  background: var(--color-gray-50);
+}
+
+.chip-dia.is-ativo {
+  background: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+  color: #fff;
+}
+
+/* Seletor de ponto de carregamento — visual de "linha de app" com ícone e
+   seta, mas continua sendo um <select> nativo por baixo (o próprio select
+   fica transparente, sem borda, ocupando a área do texto). */
+.ponto-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.ponto-picker-icone {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ponto-picker-texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ponto-picker-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.ponto-picker-select {
+  border: none;
+  background: transparent;
+  padding: 2px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.ponto-picker-select:focus {
+  outline: none;
+}
+
+.ponto-picker-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+/* Lista de horários sugeridos — linha com ícone circular, título +
+   legenda de disponibilidade, e seta indicando que o toque abre o modal
+   de ajuste (a hora cheia é sugestão, não obrigação). */
+.horario-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  text-align: left;
+}
+
+.horario-item:hover:not(:disabled) {
+  background: var(--color-gray-50);
+}
+
+.horario-item-icone {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-gray-100);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.horario-item-texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.horario-item-titulo {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.horario-item-sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 1px;
+}
+
+.horario-item-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.horario-item.is-agora {
+  border-color: var(--color-primary-400);
+  background: var(--color-primary-50);
+}
+
+.horario-item.is-agora .horario-item-icone {
+  background: var(--color-primary-200);
+  color: var(--color-primary-700);
+}
+
+.horario-item.is-agora .horario-item-titulo {
+  color: var(--color-primary-800);
+}
+
+.horario-item:disabled {
+  cursor: not-allowed;
+  background: var(--color-gray-50);
+}
+
+.horario-item:disabled .horario-item-titulo {
+  color: var(--color-text-muted);
+}
+
+/* Card informativo quando a unidade já tem reserva ativa (RN-01) — reusa
+   o fundo escuro do .reserva-hero (Minhas Reservas) pra manter o mesmo
+   padrão visual entre as duas telas. */
+.reserva-bloqueada-icone {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal de ajuste de horário/duração (Nova Reserva) --------------------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 28, 15, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.modal-card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  width: 100%;
+  max-width: 380px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Cabeçalhos de seção/card ---------------------------------------------- */
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.card-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-header h2 {
+  margin: 0 0 2px;
+}
+
+.card-header-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+/* Hub da aba Admin — cards clicáveis que levam a cada tela administrativa. */
+
+.admin-hub-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.admin-hub-item:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-gray-50);
+  text-decoration: none;
+}
+
+.admin-hub-item-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  margin-top: 8px;
+}
+
+/* Trilha de navegação das telas administrativas (Admin / Histórico / ...) */
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+}
+
+.breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.breadcrumb-item a {
+  color: var(--color-primary-700);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-separador {
+  color: var(--color-border-strong);
+}
+
+/* Lista de alertas agrupada por dia --------------------------------------- */
+
+.alert-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  margin: 20px 0 8px;
+}
+
+.alert-group-label:first-child {
+  margin-top: 0;
+}
+
+.alert-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid transparent;
+}
+
+.alert-row:not(:last-child) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.alert-row.is-destaque {
+  border-left-color: var(--color-primary-600);
+  background: var(--color-primary-50);
+}
+
+.alert-row-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.alert-row-icon svg {
+  stroke: currentColor;
 }
 
 label {
@@ -254,14 +880,65 @@ label {
   background: var(--color-gray-50);
 }
 
-.btn-danger {
+/* Botão só com ícone (ex.: "reenviar convite" no card de unidade) — cabe
+   ao lado de outros elementos no cabeçalho sem competir por espaço com o
+   texto, liberando uma linha inteira do card. */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-strong);
   background: var(--color-surface);
-  color: var(--color-danger-text);
-  border-color: var(--color-danger-bg);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--color-gray-50);
+}
+
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Versão preenchida (cor de marca) do icon-btn — usada em ações de
+   destaque no cabeçalho, como "Nova Unidade" (casinha + "+"). */
+.icon-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-primary-600);
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.icon-btn-primary:hover {
+  background: var(--color-primary-700);
+}
+
+.icon-btn-primary:hover .icon-btn-primary-selo-fundo {
+  fill: var(--color-primary-700);
+}
+
+.btn-danger {
+  background: var(--color-danger-text);
+  color: #fff;
+  border-color: var(--color-danger-text);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: var(--color-danger-bg);
+  background: #841F1F;
+  border-color: #841F1F;
 }
 
 .btn-sm {
@@ -339,8 +1016,12 @@ label {
 }
 
 /* Navegação --------------------------------------------------------------- */
+/* Barra superior (logo + sair) fixa no topo, e barra inferior fixa com as
+   abas principais — estilo app de celular. Unidade comum vê 4 abas; quem
+   é admin vê uma 5ª aba "Admin" que leva ao hub com as telas
+   administrativas (Unidades, Pontos, Histórico, Estatísticas). */
 
-.navbar {
+.topbar {
   position: sticky;
   top: 0;
   z-index: 10;
@@ -349,14 +1030,14 @@ label {
   border-bottom: 1px solid var(--color-border);
 }
 
-.navbar-inner {
+.topbar-inner {
   max-width: 760px;
   margin: 0 auto;
-  padding: 12px 20px;
+  padding: 10px 20px;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .navbar-brand {
@@ -365,44 +1046,66 @@ label {
   gap: 8px;
   font-weight: 600;
   color: var(--color-gray-900);
-  margin-right: 12px;
 }
 
-.navbar-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--color-primary-600);
+.navbar-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
   flex-shrink: 0;
 }
 
-.navbar-link {
-  padding: 6px 12px;
-  border-radius: var(--radius-pill);
-  font-size: 13.5px;
+.bottombar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.bottombar-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px 10px;
+  font-size: 11px;
   font-weight: 500;
+  line-height: 1.2;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.bottombar-item span {
+  display: block;
+  width: 100%;
+}
+
+.bottombar-item:hover {
+  text-decoration: none;
   color: var(--color-text-secondary);
 }
 
-.navbar-link:hover {
-  background: var(--color-gray-100);
-  text-decoration: none;
+.bottombar-item.is-active {
+  color: var(--color-primary-700);
 }
 
-.navbar-link.is-active {
-  background: var(--color-primary-50);
-  color: var(--color-primary-800);
+.bottombar-item svg {
+  stroke: currentColor;
 }
 
-.navbar-sep {
-  width: 1px;
-  height: 20px;
-  background: var(--color-border-strong);
-  margin: 0 6px;
-}
-
-.navbar-spacer {
-  margin-left: auto;
+/* Espaço reservado no fim da página pra conteúdo não ficar escondido
+   atrás da barra inferior fixa (~68px de altura + área segura do iOS). */
+body {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Mensagens de erro --------------------------------------------------------- */

@@ -197,8 +197,6 @@ src/
 - Envio real do Web Push em `send-push/index.ts` (lib comentada).
 - Seletor de ponto de carregamento em `CriarReserva.jsx` (hoje é um
   placeholder de texto).
-- Ícones do PWA em `public/icons/` (192x192 e 512x512 — apenas a referência
-  no `manifest.json` foi criada).
 - Testes automatizados (nenhum incluído neste scaffold).
 
 ## 9. Documentos de referência

@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import { formatarDataHora } from "../../lib/formatarDataHora.js";
+import { formatarHora, rotuloDia } from "../../lib/formatarDataHora.js";
 import { traduzirErro } from "../../lib/traduzirErro.js";
 import { StatusBadge } from "../../components/StatusBadge.jsx";
 import NavBar from "../../components/NavBar.jsx";
 
-// UC-07, UC-08, UC-09, UC-10 — Wireframes, tela 04
+// UC-07, UC-08, UC-09, UC-10 — Wireframes, tela 04. Layout com a reserva
+// ativa/confirmada em destaque (card "hero") e o restante como histórico
+// compacto — opção B escolhida pelo síndico entre as sugestões de redesign.
 export default function MinhasReservas() {
   const [reservas, setReservas] = useState([]);
+  const [agora, setAgora] = useState(new Date());
 
   async function carregar() {
     // A policy `reserva_select` libera SELECT em toda a tabela pra quem é
@@ -27,6 +30,45 @@ export default function MinhasReservas() {
   useEffect(() => {
     carregar();
   }, []);
+
+  // Atualiza a barra de progresso e a contagem "começa em..." do card em
+  // destaque sem precisar de uma ação do usuário pra re-renderizar.
+  useEffect(() => {
+    const id = setInterval(() => setAgora(new Date()), 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Reserva ativa (confirmada ou em andamento) sempre em primeiro — no
+  // máximo uma existe por vez (RN-01), mas o critério vale mesmo que isso
+  // mude no futuro. As demais mantêm a ordenação por início decrescente
+  // que já vem da consulta.
+  function prioridade(r) {
+    return r.status === "confirmada" || r.status === "em_andamento" ? 0 : 1;
+  }
+  const reservasOrdenadas = [...reservas].sort((a, b) => {
+    const diferencaPrioridade = prioridade(a) - prioridade(b);
+    if (diferencaPrioridade !== 0) return diferencaPrioridade;
+    return new Date(b.inicio_previsto) - new Date(a.inicio_previsto);
+  });
+  const ativa = reservasOrdenadas.find((r) => prioridade(r) === 0);
+  const historico = ativa ? reservasOrdenadas.slice(1) : reservasOrdenadas;
+
+  function progressoEmAndamento(r) {
+    const inicio = new Date(r.inicio_previsto).getTime();
+    const fim = new Date(r.fim_previsto).getTime();
+    const total = fim - inicio;
+    if (total <= 0) return 100;
+    return Math.max(0, Math.min(100, Math.round(((agora.getTime() - inicio) / total) * 100)));
+  }
+
+  function descricaoInicio(r) {
+    const diffMin = Math.round((new Date(r.inicio_previsto).getTime() - agora.getTime()) / 60000);
+    if (diffMin <= 0) return "a qualquer momento";
+    if (diffMin < 60) return `em ${diffMin} min`;
+    const horas = Math.floor(diffMin / 60);
+    const min = diffMin % 60;
+    return min > 0 ? `em ${horas}h${min}min` : `em ${horas}h`;
+  }
 
   async function cancelar(id) {
     if (!confirm("Cancelar esta reserva? Essa ação não pode ser desfeita.")) return;
@@ -81,31 +123,80 @@ export default function MinhasReservas() {
 
       {reservas.length === 0 && <p className="empty-state">Você ainda não tem reservas.</p>}
 
-      <div className="stack">
-        {reservas.map((r) => (
-          <div key={r.id} className="card">
-            <div className="row row--between" style={{ marginBottom: 8 }}>
-              <strong>{r.ponto_carregamento?.nome} · {r.tipo === "diurna" ? "Diurna" : "Noturna"}</strong>
-              <StatusBadge status={r.status} />
+      {ativa && (
+        <div className="reserva-hero">
+          <div className="reserva-hero-eyebrow">
+            {ativa.status === "em_andamento" ? "Reserva ativa" : "Reserva confirmada"}
+          </div>
+          <div className="row row--between">
+            <div className="reserva-hero-titulo">
+              {ativa.ponto_carregamento?.nome} · {ativa.tipo === "diurna" ? "Diurna" : "Noturna"}
             </div>
-            <div style={{ color: "var(--color-text-secondary)", fontSize: 14, marginBottom: 12 }}>
-              {formatarDataHora(r.inicio_previsto)} até {formatarDataHora(r.fim_real ?? r.fim_previsto)}
-            </div>
-            {r.status === "confirmada" && (
-              <button onClick={() => cancelar(r.id)} className="btn btn-danger btn-sm">Cancelar</button>
+            <StatusBadge status={ativa.status} />
+          </div>
+          <div className="reserva-hero-horario">
+            {formatarHora(ativa.inicio_previsto)} – {formatarHora(ativa.fim_previsto)}
+          </div>
+
+          {ativa.status === "em_andamento" ? (
+            <>
+              <div className="reserva-hero-progresso-track">
+                <div
+                  className="reserva-hero-progresso-fill"
+                  style={{ width: `${progressoEmAndamento(ativa)}%` }}
+                />
+              </div>
+              <div className="reserva-hero-progresso-legenda">
+                {progressoEmAndamento(ativa)}% do tempo reservado
+              </div>
+            </>
+          ) : (
+            <div className="reserva-hero-progresso-legenda">Começa {descricaoInicio(ativa)}</div>
+          )}
+
+          <div className="reserva-hero-acoes">
+            {ativa.status === "confirmada" && (
+              <button onClick={() => cancelar(ativa.id)} className="btn reserva-hero-btn-cancelar">
+                Cancelar
+              </button>
             )}
-            {r.status === "em_andamento" && (
-              <div className="row">
-                <button onClick={() => liberar(r.id)} className="btn btn-secondary btn-sm">Liberar agora</button>
-                <button onClick={() => cancelar(r.id)} className="btn btn-danger btn-sm">Cancelar</button>
-                <button onClick={() => avisarAtraso(r.id)} className="btn btn-secondary btn-sm">
+            {ativa.status === "em_andamento" && (
+              <>
+                <button onClick={() => liberar(ativa.id)} className="btn reserva-hero-btn-primario">
+                  Liberar agora
+                </button>
+                <button onClick={() => avisarAtraso(ativa.id)} className="btn reserva-hero-btn-secundario">
                   Solicitar retirada de veículo
                 </button>
-              </div>
+              </>
             )}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {historico.length > 0 && (
+        <>
+          <div className="historico-label">Histórico</div>
+          <div className="stack" style={{ gap: 10 }}>
+            {historico.map((r) => (
+              <div key={r.id} className="historico-item">
+                <div className="historico-item-icone">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
+                  </svg>
+                </div>
+                <div className="historico-item-info">
+                  <strong>{r.ponto_carregamento?.nome} · {r.tipo === "diurna" ? "Diurna" : "Noturna"}</strong>
+                  <div className="historico-item-sub">
+                    {rotuloDia(r.inicio_previsto)}, {formatarHora(r.inicio_previsto)} – {formatarHora(r.fim_real ?? r.fim_previsto)}
+                  </div>
+                </div>
+                <StatusBadge status={r.status} />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </main>
     </>
   );

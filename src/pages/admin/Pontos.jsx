@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { traduzirErro } from "../../lib/traduzirErro.js";
 import { AtivoBadge } from "../../components/StatusBadge.jsx";
 import NavBar from "../../components/NavBar.jsx";
+import Breadcrumb from "../../components/Breadcrumb.jsx";
 
 // UC-04 (Gerenciar Pontos) / UC-05 e UC-13 (Configuração Global)
+// Cadastro de ponto novo mora em /admin/pontos/novo (NovoPonto.jsx).
 export default function AdminPontos() {
   const [pontos, setPontos] = useState([]);
   const [config, setConfig] = useState(null);
-  const [novoPonto, setNovoPonto] = useState({ nome: "", duracao_maxima_minutos: "" });
   const [erro, setErro] = useState(null);
+  const [acaoEmAndamento, setAcaoEmAndamento] = useState(null); // id do ponto sofrendo ação
 
   async function carregar() {
     const { data: p } = await supabase.from("ponto_carregamento").select("*").order("nome");
@@ -35,19 +38,24 @@ export default function AdminPontos() {
     carregar();
   }
 
-  async function cadastrarPonto(e) {
-    e.preventDefault();
+  async function excluirPonto(ponto) {
+    if (!confirm(`Excluir o ponto "${ponto.nome}"? Isso não pode ser desfeito.`)) return;
     setErro(null);
-    const { error } = await supabase.from("ponto_carregamento").insert({
-      nome: novoPonto.nome,
-      duracao_maxima_minutos: Number(novoPonto.duracao_maxima_minutos),
-    });
-    if (error) {
-      setErro(traduzirErro(error.message));
-      return;
+    setAcaoEmAndamento(ponto.id);
+    try {
+      // RLS `ponto_delete_admin` libera a exclusão pro síndico. Se houver
+      // reservas apontando pra este ponto, o próprio banco recusa (a FK
+      // reserva.ponto_id não tem cascade, de propósito, pra preservar o
+      // histórico) — o erro chega traduzido via traduzirErro.
+      const { error } = await supabase.from("ponto_carregamento").delete().eq("id", ponto.id);
+      if (error) {
+        setErro(traduzirErro(error.message));
+        return;
+      }
+      await carregar();
+    } finally {
+      setAcaoEmAndamento(null);
     }
-    setNovoPonto({ nome: "", duracao_maxima_minutos: "" });
-    carregar();
   }
 
   async function salvarConfig(e) {
@@ -66,7 +74,20 @@ export default function AdminPontos() {
     <>
     <NavBar />
     <main className="page">
-      <h1 className="section">Pontos de Carregamento</h1>
+      <Breadcrumb itens={[{ texto: "Admin", to: "/admin" }, { texto: "Pontos de Carregamento" }]} />
+      <div className="row row--between" style={{ alignItems: "center", marginBottom: 20 }}>
+        <h1 className="section" style={{ marginBottom: 0 }}>Pontos de Carregamento</h1>
+        <Link to="/admin/pontos/novo" className="icon-btn-primary" title="Novo ponto de carregamento" aria-label="Novo ponto de carregamento">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M13 2 L4 14h6l-1 8 9-12h-6z" />
+            <circle className="icon-btn-primary-selo-fundo" cx="18.5" cy="17" r="6" fill="var(--color-primary-600)" stroke="none" />
+            <circle cx="18.5" cy="17" r="6" fill="none" strokeWidth="1.6" />
+            <path d="M18.5 14.5v5M16 17h5" strokeWidth="1.6" />
+          </svg>
+        </Link>
+      </div>
+
+      {erro && <p className="form-error" style={{ marginBottom: 16 }}>{erro}</p>}
 
       <div className="stack" style={{ marginBottom: 32 }}>
         {pontos.map((p) => (
@@ -75,55 +96,31 @@ export default function AdminPontos() {
               <strong>{p.nome}</strong>
               <AtivoBadge ativo={p.ativo} />
             </div>
-            <div className="row row--between">
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 400 }}>
-                Máx. diurno (min)
-                <input
-                  type="number"
-                  min="1"
-                  defaultValue={p.duracao_maxima_minutos}
-                  style={{ width: 90, height: 32 }}
-                  onBlur={(e) => {
-                    const minutos = Number(e.target.value);
-                    if (minutos > 0 && minutos !== p.duracao_maxima_minutos) {
-                      atualizarDuracaoMaxima(p, minutos);
-                    }
-                  }}
-                />
-              </label>
-              <button onClick={() => alternarAtivo(p)} className="btn btn-secondary btn-sm">
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 400, marginBottom: 12 }}>
+              Máx. diurno (min)
+              <input
+                type="number"
+                min="1"
+                defaultValue={p.duracao_maxima_minutos}
+                style={{ width: 90, height: 32 }}
+                onBlur={(e) => {
+                  const minutos = Number(e.target.value);
+                  if (minutos > 0 && minutos !== p.duracao_maxima_minutos) {
+                    atualizarDuracaoMaxima(p, minutos);
+                  }
+                }}
+              />
+            </label>
+            <div className="row">
+              <button onClick={() => alternarAtivo(p)} disabled={acaoEmAndamento === p.id} className="btn btn-secondary btn-sm">
                 {p.ativo ? "Desativar" : "Ativar"}
+              </button>
+              <button onClick={() => excluirPonto(p)} disabled={acaoEmAndamento === p.id} className="btn btn-danger btn-sm">
+                Excluir
               </button>
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="card" style={{ marginBottom: 32 }}>
-        <h2>Novo Ponto de Carregamento</h2>
-        <form onSubmit={cadastrarPonto} className="row" style={{ alignItems: "flex-end" }}>
-          <div className="field" style={{ flex: 2, minWidth: 180 }}>
-            Nome
-            <input
-              placeholder="Pilotis, Garagem..."
-              value={novoPonto.nome}
-              onChange={(e) => setNovoPonto({ ...novoPonto, nome: e.target.value })}
-              required
-            />
-          </div>
-          <div className="field" style={{ flex: 1, minWidth: 140 }}>
-            Duração máx. diurna (min)
-            <input
-              type="number"
-              min="1"
-              value={novoPonto.duracao_maxima_minutos}
-              onChange={(e) => setNovoPonto({ ...novoPonto, duracao_maxima_minutos: e.target.value })}
-              required
-            />
-          </div>
-          <button type="submit" className="btn btn-primary">Adicionar</button>
-        </form>
-        {erro && <p className="form-error" style={{ marginTop: 12 }}>{erro}</p>}
       </div>
 
       <div className="card">
