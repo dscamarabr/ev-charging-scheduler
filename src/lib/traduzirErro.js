@@ -39,6 +39,27 @@ const PADROES_REDE = [
   { regex: /^load failed$/i, texto: "Falha na conexão. Verifique sua internet e tente novamente." },
 ];
 
+// supabase-js sempre preenche `error.message` com o texto genérico "Edge
+// Function returned a non-2xx status code" quando a function responde com
+// status de erro (400, 403, 409...) — a mensagem real que a própria Edge
+// Function devolveu (nosso JSON { error: "..." }) fica só no corpo da
+// resposta, acessível via `error.context` (um objeto Response). Sem isso,
+// toda falha de negócio (permissão, duplicidade, limite de e-mail etc.)
+// aparecia pro usuário só como esse texto genérico em inglês.
+export async function extrairErroFuncao(error, data) {
+  if (data?.error) return data.error;
+  if (!error) return null;
+  if (error.context && typeof error.context.json === "function") {
+    try {
+      const corpo = await error.context.clone().json();
+      if (corpo?.error) return corpo.error;
+    } catch {
+      // corpo não era JSON (ex.: erro de rede/gateway) — cai no fallback abaixo
+    }
+  }
+  return error.message;
+}
+
 export function traduzirErro(mensagem) {
   if (!mensagem) return mensagem;
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
-import { traduzirErro } from "../../lib/traduzirErro.js";
+import { traduzirErro, extrairErroFuncao } from "../../lib/traduzirErro.js";
 import NavBar from "../../components/NavBar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
 
@@ -22,10 +22,8 @@ export default function NovaUnidade() {
       const { data, error } = await supabase.functions.invoke("unidades?acao=cadastrar", {
         body: form,
       });
-      // supabase-js só popula `error` para falhas de rede/transporte; erros
-      // de negócio (403/400) vêm no corpo da resposta, então checamos os dois.
       if (error || data?.error) {
-        setErro(traduzirErro(error?.message ?? data.error));
+        setErro(traduzirErro(await extrairErroFuncao(error, data)));
         return;
       }
       navigate("/admin/unidades");

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
-import { traduzirErro } from "../../lib/traduzirErro.js";
+import { traduzirErro, extrairErroFuncao } from "../../lib/traduzirErro.js";
 import { compararNumero } from "../../lib/compararNumero.js";
 import { AtivoBadge } from "../../components/StatusBadge.jsx";
 import NavBar from "../../components/NavBar.jsx";
@@ -66,7 +66,7 @@ export default function AdminUnidades() {
         body: { unidade_id: u.id },
       });
       if (error || data?.error) {
-        setErro(traduzirErro(error?.message ?? data.error));
+        setErro(traduzirErro(await extrairErroFuncao(error, data)));
         return;
       }
       await carregar();
@@ -84,7 +84,7 @@ export default function AdminUnidades() {
         body: { unidade_id: u.id },
       });
       if (error || data?.error) {
-        setErro(traduzirErro(error?.message ?? data.error));
+        setErro(traduzirErro(await extrairErroFuncao(error, data)));
         return;
       }
       await carregar();
