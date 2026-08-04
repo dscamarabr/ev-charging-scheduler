@@ -31,11 +31,30 @@ export default function AceitarConvite() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Se veio pelo link do e-mail, a sessão já deve estar pronta aqui.
+    // Se veio pelo link do e-mail, o token chega no fragmento (#) da URL e
+    // o supabase-js processa isso de forma assíncrona ao inicializar o
+    // client — pode não estar pronto ainda no exato instante deste
+    // primeiro getSession(). Por isso também escutamos onAuthStateChange:
+    // se a sessão for estabelecida um instante depois, a tela atualiza
+    // sozinha para o formulário de senha, sem exigir o código manual.
+    let ativo = true;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!ativo) return;
       setAutenticado(!!session);
       setVerificando(false);
     });
+
+    const { data: assinatura } = supabase.auth.onAuthStateChange((_evento, session) => {
+      if (!ativo) return;
+      setAutenticado(!!session);
+      setVerificando(false);
+    });
+
+    return () => {
+      ativo = false;
+      assinatura.subscription.unsubscribe();
+    };
   }, []);
 
   async function validarCodigo(e) {

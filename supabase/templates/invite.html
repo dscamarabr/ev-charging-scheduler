@@ -1,0 +1,17 @@
+<h2>Convite — Grand Soleil</h2>
+
+<p>Você foi convidado(a) a criar sua conta no app de agendamento dos pontos
+de carregamento do condomínio Grand Soleil.</p>
+
+<p><a href="{{ .ConfirmationURL }}">Aceitar convite</a></p>
+
+<p>Se o link acima não abrir (por exemplo, se você estiver vendo este
+e-mail em outro dispositivo), acesse
+<a href="{{ .SiteURL }}/convite">{{ .SiteURL }}/convite</a> e informe:</p>
+
+<ul>
+  <li>E-mail: {{ .Email }}</li>
+  <li>Código: <strong>{{ .Token }}</strong></li>
+</ul>
+
+<p style="color:#888;font-size:12px">Se você não esperava este e-mail, pode ignorá-lo.</p>

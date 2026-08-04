@@ -31,5 +31,9 @@ enable_signup = false
 [auth.email]
 enable_confirmations = true
 
+[auth.email.template.invite]
+subject = "Você foi convidado(a) para o Grand Soleil"
+content_path = "./supabase/templates/invite.html"
+
 [edge_runtime]
 enabled = true
