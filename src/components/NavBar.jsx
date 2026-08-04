@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { tentarInscricaoAutomatica } from "../lib/pushNotifications.js";
 
 // Ícones de linha simples (sem dependência de biblioteca externa) usados
 // nas abas da barra inferior.
@@ -54,6 +55,12 @@ export default function NavBar() {
 
   useEffect(() => {
     supabase.rpc("is_admin").then(({ data }) => setIsAdmin(!!data));
+    // RF-23/RF-24: notificações vêm ativas por padrão — tenta inscrever o
+    // aparelho sozinho na primeira vez (a função já sai sem fazer nada se
+    // a permissão já foi decidida antes ou se o membro desativou em
+    // Perfil). Roda em toda tela autenticada, mas é barata: só pede
+    // permissão de verdade quando ainda está "default".
+    tentarInscricaoAutomatica();
   }, []);
 
   async function sair() {

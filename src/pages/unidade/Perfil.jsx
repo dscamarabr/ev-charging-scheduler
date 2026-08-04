@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { traduzirErro } from "../../lib/traduzirErro.js";
+import { inscreverPush, cancelarPush, pushSuportado } from "../../lib/pushNotifications.js";
 import NavBar from "../../components/NavBar.jsx";
 
 // UC não numerado no scaffold original — tela de autoatendimento pra
@@ -28,6 +29,12 @@ export default function Perfil() {
   const [erroSenha, setErroSenha] = useState(null);
   const [sucessoSenha, setSucessoSenha] = useState(false);
 
+  // RF-23/RF-24 — notificações push. Vêm ativas por padrão (RN definida
+  // com o síndico); este toggle é a única forma de desativar.
+  const [notificacoesAtivas, setNotificacoesAtivas] = useState(true);
+  const [salvandoNotificacoes, setSalvandoNotificacoes] = useState(false);
+  const [avisoNotificacoes, setAvisoNotificacoes] = useState(null);
+
   useEffect(() => {
     async function carregar() {
       const {
@@ -42,10 +49,45 @@ export default function Perfil() {
       setMembro(data);
       setNome(data?.nome ?? "");
       setNumeroUnidade(data?.unidade?.numero ?? "");
+      setNotificacoesAtivas(data?.notificacoes_ativas ?? true);
       setCarregando(false);
     }
     carregar();
   }, []);
+
+  async function alternarNotificacoes() {
+    const novoValor = !notificacoesAtivas;
+    setSalvandoNotificacoes(true);
+    setAvisoNotificacoes(null);
+    try {
+      const { error } = await supabase
+        .from("membro_unidade")
+        .update({ notificacoes_ativas: novoValor })
+        .eq("id", membro.id);
+      if (error) {
+        setAvisoNotificacoes(traduzirErro(error.message));
+        return;
+      }
+      setNotificacoesAtivas(novoValor);
+
+      if (novoValor) {
+        const resultado = await inscreverPush();
+        if (!resultado.ok) {
+          if (resultado.motivo === "negado") {
+            setAvisoNotificacoes(
+              "Notificações ativadas, mas o navegador está bloqueando a permissão. Ative manualmente nas configurações do site/app e tente de novo."
+            );
+          } else if (resultado.motivo === "indisponivel") {
+            setAvisoNotificacoes("Este navegador não tem suporte a notificações push.");
+          }
+        }
+      } else {
+        await cancelarPush();
+      }
+    } finally {
+      setSalvandoNotificacoes(false);
+    }
+  }
 
   async function salvarPerfil(e) {
     e.preventDefault();
@@ -158,6 +200,39 @@ export default function Perfil() {
                   {salvandoPerfil ? "Salvando..." : "Salvar dados"}
                 </button>
               </form>
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <span className="card-header-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                </span>
+                <div>
+                  <h2>Notificações</h2>
+                  <p className="card-header-subtitle">Avisos próximo ao início e ao fim da sua reserva</p>
+                </div>
+              </div>
+              <label className="switch-row">
+                <span>
+                  Notificações push
+                  {!pushSuportado() && <small style={{ display: "block" }}>Não suportado neste navegador.</small>}
+                </span>
+                <span className="switch">
+                  <input
+                    type="checkbox"
+                    checked={notificacoesAtivas}
+                    onChange={alternarNotificacoes}
+                    disabled={salvandoNotificacoes || !pushSuportado()}
+                  />
+                  <span className="switch-track">
+                    <span className="switch-knob" />
+                  </span>
+                </span>
+              </label>
+              {avisoNotificacoes && <p className="form-error" style={{ marginTop: 8 }}>{avisoNotificacoes}</p>}
             </div>
 
             <div className="card">

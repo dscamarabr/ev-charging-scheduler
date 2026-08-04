@@ -1132,3 +1132,70 @@ body {
   padding: 24px 0;
   text-align: center;
 }
+
+/* Switch (toggle) — usado hoje só em Perfil > Notificações (RF-23/24) */
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.switch-row small {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.switch {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 44px;
+  height: 24px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.switch input:disabled {
+  cursor: not-allowed;
+}
+
+.switch-track {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--color-gray-300);
+  transition: background 0.15s ease;
+  display: inline-block;
+}
+
+.switch-knob {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 3px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.switch input:checked + .switch-track {
+  background: var(--color-primary-600);
+}
+
+.switch input:checked + .switch-track .switch-knob {
+  transform: translateX(20px);
+}
+
+.switch input:disabled + .switch-track {
+  opacity: 0.6;
+}

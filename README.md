@@ -140,9 +140,23 @@ npx web-push generate-vapid-keys
 A chave **pública** vai no `.env` do frontend (`VITE_VAPID_PUBLIC_KEY`); a
 **privada** fica só nos secrets da function acima.
 
-> **TODO**: `supabase/functions/send-push/index.ts` está com a chamada real
-> de envio (`web-push`) comentada — descomente e ajuste os imports depois
-> de decidir a lib de Web Push para Deno.
+Depois de aplicar a migration `0014_push_subscription_por_membro.sql` e dar
+`npm install` (nova dependência `workbox-precaching`, usada pelo service
+worker customizado em `src/sw.js`), redeploy a function pra pegar o envio
+real:
+
+```bash
+supabase functions deploy send-push
+```
+
+Checklist rápido pra testar de ponta a ponta depois do deploy do frontend
+(seção 5): logar num aparelho, aceitar a permissão de notificação quando
+o navegador perguntar (deve aparecer sozinho — ativo por padrão, ver
+Perfil > Notificações), criar uma reserva com início em menos de 10
+minutos e aguardar o push chegar (os jobs do pg_cron rodam a cada
+minuto). Lembre-se: **iOS só recebe push com o app instalado na tela de
+início** (Safari 16.4+) — no navegador comum não funciona, mesmo com a
+permissão concedida.
 
 ---
 
@@ -194,19 +208,24 @@ supabase/
     0008_ponto_delete_policy.sql                   — RLS de delete em ponto_carregamento (faltava)
     0009_noturna_fim_fixo_apos_21h.sql              — reserva noturna iniciada após as 21h também termina às 06h (não soma +9h do início)
     0010_membro_unidade.sql                         — múltiplos membros (logins) por unidade — separa unidade de membro_unidade
+    0011_liberar_antecipado_libera_exclusion.sql    — liberação antecipada libera o ponto de verdade (RF-16)
+    0012_fix_criar_reserva_membro_unidade.sql       — corrige criar_reserva após 0010
+    0013_reserva_select_visivel_a_todos.sql         — RLS: unidade comum passa a ver a agenda de todo mundo (bug desde 0001)
+    0014_push_subscription_por_membro.sql           — inscrição de push por membro (não mais por unidade) + toggle notificacoes_ativas
   functions/
-    send-push/    — envia o Web Push (RF-23, RF-24) — envio real ainda comentado, ver seção 8
+    send-push/    — envia o Web Push (RF-23, RF-24) — envio real implementado (web-push)
     alertas/       — disparo/leitura do alerta anônimo (RNF-08)
     unidades/      — cadastro de unidade/membro (cria conta no Auth + linha em `unidade`/`membro_unidade`)
   config.toml
 
 src/
   components/  — NavBar, RequireAuth, StatusBadge (StatusBadge/AtivoBadge), Breadcrumb
-  lib/         — supabaseClient, traduzirErro, formatarDataHora, mesUtil, compararNumero, telaInicial
+  lib/         — supabaseClient, traduzirErro, formatarDataHora, mesUtil, compararNumero, telaInicial, pushNotifications
   styles/theme.css   — sistema de design "Acolhedor" (cores, componentes reutilizáveis — ver seção 8.1)
   pages/
     unidade/   — Login, AceitarConvite, CriarReserva (tela "Agendar"), MinhasReservas, Alertas, Perfil
     admin/     — AdminHome (hub), Unidades, NovaUnidade, AdicionarMorador, Pontos, NovoPonto, Historico, Estatistica
+  sw.js        — service worker customizado (push + notificationclick), ver seção 4
   App.jsx, main.jsx
 ```
 
@@ -218,20 +237,16 @@ Em ordem de prioridade prática:
    há projeto Supabase remoto configurado nem frontend hospedado. É pré-
    requisito pra testar em celular (iOS só recebe push com o site instalado
    via HTTPS, ver seção 4) — seguir seções 3, 5 e 6 deste README.
-2. **Push notifications** — infraestrutura pronta (tabela `push_subscription`,
-   job que decide quando notificar, Edge Function `send-push`), mas falta:
-   - Código no frontend que pede permissão e chama
-     `pushManager.subscribe()` (não existe ainda em nenhuma tela).
-   - Descomentar/ajustar o envio real (`web-push`) em `send-push/index.ts`.
-   - Gerar e configurar as chaves VAPID reais (`npx web-push generate-vapid-keys`).
-3. Testes automatizados — nenhum incluído; dado o escopo (uso interno de um
+2. Testes automatizados — nenhum incluído; dado o escopo (uso interno de um
    condomínio, sem transação financeira no próprio app), baixa prioridade
    pra v1.
 
 Já resolvido nesta rodada (não é mais TODO): cadastro de unidade via Edge
 Function, seletor de ponto de carregamento em "Agendar", badge "Inativo",
 ordenação numérica de unidades, reserva noturna com início após as 21h,
-múltiplos membros (logins) por unidade.
+múltiplos membros (logins) por unidade, Web Push de ponta a ponta (RF-23,
+RF-24) — inscrição automática (ativa por padrão) + toggle em Perfil +
+envio real na Edge Function.
 
 > **Docs desatualizados**: o Modelo de Dados.docx (fora deste repo, pasta
 > irmã) ainda documenta `unidade` com `auth_user_id`/`email`/
