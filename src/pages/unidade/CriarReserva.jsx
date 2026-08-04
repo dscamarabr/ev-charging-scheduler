@@ -107,7 +107,7 @@ export default function CriarReserva() {
     const limite = new Date(agora.getTime() + 8 * 24 * 60 * 60 * 1000);
     supabase
       .from("reserva")
-      .select("inicio_previsto, fim_previsto")
+      .select("inicio_previsto, fim_previsto, fim_real")
       .eq("ponto_id", pontoId)
       .neq("status", "cancelada")
       .lte("inicio_previsto", limite.toISOString())
@@ -121,15 +121,25 @@ export default function CriarReserva() {
 
   const pontoSelecionado = pontos.find((p) => p.id === pontoId);
 
+  // Fim "de verdade" de uma reserva: se ela já foi encerrada (liberação
+  // manual antecipada — RF-16 — ou o job automático de fim de janela),
+  // fim_real é o horário real em que o ponto ficou livre, que pode ser
+  // BEM antes do fim_previsto original (ex.: reserva noturna liberada às
+  // 23h, fim_previsto ainda marcando 06h). Sem isso, o ponto parecia
+  // ocupado até o fim_previsto mesmo já tendo sido liberado.
+  function fimEfetivo(r) {
+    return new Date(r.fim_real ?? r.fim_previsto);
+  }
+
   // Retorna null se o intervalo estiver livre, ou o horário em que o ponto
-  // fica livre (maior fim_previsto entre as reservas que conflitam) — usada
+  // fica livre (maior fim efetivo entre as reservas que conflitam) — usada
   // pra checar um intervalo [inicio, fim) específico.
   function conflitoAte(inicio, fim) {
     const conflitos = reservasDoPonto.filter(
-      (r) => inicio < new Date(r.fim_previsto) && fim > new Date(r.inicio_previsto)
+      (r) => inicio < fimEfetivo(r) && fim > new Date(r.inicio_previsto)
     );
     if (conflitos.length === 0) return null;
-    return new Date(Math.max(...conflitos.map((r) => new Date(r.fim_previsto).getTime())));
+    return new Date(Math.max(...conflitos.map((r) => fimEfetivo(r).getTime())));
   }
 
   // Diz se um instante específico está dentro de alguma reserva existente
@@ -137,9 +147,9 @@ export default function CriarReserva() {
   // o clique: a hora cheia é uma sugestão, não uma obrigação).
   function ocupadoNoInstante(instante) {
     const conflito = reservasDoPonto.find(
-      (r) => instante >= new Date(r.inicio_previsto) && instante < new Date(r.fim_previsto)
+      (r) => instante >= new Date(r.inicio_previsto) && instante < fimEfetivo(r)
     );
-    return conflito ? new Date(conflito.fim_previsto) : null;
+    return conflito ? fimEfetivo(conflito) : null;
   }
 
   // Empurra um candidato de início pra frente até um instante realmente
@@ -152,10 +162,10 @@ export default function CriarReserva() {
     let candidato = new Date(inicio);
     for (let i = 0; i < 10; i++) {
       const conflito = reservasDoPonto.find(
-        (r) => candidato >= new Date(r.inicio_previsto) && candidato < new Date(r.fim_previsto)
+        (r) => candidato >= new Date(r.inicio_previsto) && candidato < fimEfetivo(r)
       );
       if (!conflito) return candidato;
-      const fim = new Date(conflito.fim_previsto);
+      const fim = fimEfetivo(conflito);
       fim.setSeconds(0, 0);
       fim.setMinutes(fim.getMinutes() + 1);
       candidato = fim;
