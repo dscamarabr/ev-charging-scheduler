@@ -44,14 +44,22 @@ insert into membro_unidade (unidade_id, auth_user_id, nome, email, criado_em)
 select id, auth_user_id, nome_responsavel, email, criado_em from unidade;
 
 -- ---------------------------------------------------------------------
--- 3. Remove das colunas antigas de `unidade` (agora vivem em membro_unidade)
+-- 3. As policies antigas de `unidade` (0001) referenciam `auth_user_id`
+--    diretamente — precisam cair ANTES de dropar a coluna, senão o
+--    Postgres recusa o drop (2BP01: dependência de policy em coluna).
+-- ---------------------------------------------------------------------
+drop policy unidade_select on unidade;
+drop policy unidade_update on unidade;
+
+-- ---------------------------------------------------------------------
+-- 4. Remove as colunas antigas de `unidade` (agora vivem em membro_unidade)
 -- ---------------------------------------------------------------------
 alter table unidade drop column nome_responsavel;
 alter table unidade drop column email;
 alter table unidade drop column auth_user_id;
 
 -- ---------------------------------------------------------------------
--- 4. RLS de membro_unidade
+-- 5. RLS de membro_unidade
 -- ---------------------------------------------------------------------
 alter table membro_unidade enable row level security;
 
@@ -67,7 +75,7 @@ create policy membro_update_self on membro_unidade for update
   with check (auth_user_id = auth.uid());
 
 -- ---------------------------------------------------------------------
--- 5. Helpers agora resolvem via membro_unidade em vez de unidade direto
+-- 6. Helpers agora resolvem via membro_unidade em vez de unidade direto
 -- ---------------------------------------------------------------------
 create or replace function is_admin() returns boolean
 language sql stable security definer as $$
@@ -84,13 +92,11 @@ language sql stable security definer as $$
 $$;
 
 -- ---------------------------------------------------------------------
--- 6. RLS de `unidade` — não sobrou campo editável por unidade comum
---    (numero/ativo/admin são só do síndico); select continua liberado
---    pra quem pertence à unidade (via minha_unidade_id()) ou é admin.
+-- 7. Novas policies de `unidade` — não sobrou campo editável por unidade
+--    comum (numero/ativo/admin são só do síndico); select continua
+--    liberado pra quem pertence à unidade (via minha_unidade_id()) ou é
+--    admin. (As antigas já foram derrubadas no passo 3.)
 -- ---------------------------------------------------------------------
-drop policy unidade_select on unidade;
-drop policy unidade_update on unidade;
-
 create policy unidade_select on unidade for select
   using (is_admin() or id = minha_unidade_id());
 
