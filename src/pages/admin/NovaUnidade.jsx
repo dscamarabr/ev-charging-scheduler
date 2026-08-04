@@ -63,14 +63,6 @@ export default function NovaUnidade() {
             </button>
           </div>
         </form>
-        <p style={{ fontSize: 12.5, color: "var(--color-text-muted)", marginTop: 16, marginBottom: 0 }}>
-          Um e-mail de convite é enviado para a unidade definir a própria senha.
-          Em ambiente local, veja o e-mail em{" "}
-          <a href="http://localhost:54324" target="_blank" rel="noreferrer">
-            http://localhost:54324
-          </a>{" "}
-          (Inbucket).
-        </p>
       </div>
     </main>
     </>
