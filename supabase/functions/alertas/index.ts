@@ -16,6 +16,7 @@
 // Deploy: supabase functions deploy alertas
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { enviarPushParaUnidade } from "../_shared/push.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -50,10 +51,27 @@ Deno.serve(async (req) => {
 
   if (acao === "disparar" && req.method === "POST") {
     const { minha_reserva_id } = await req.json();
-    const { error } = await supabaseAsUser.rpc("disparar_alerta", {
+    // Desde a migration 0015, a RPC devolve a unidade atrasada (só pra
+    // uso interno aqui, nunca repassada pro frontend — RF-20) pra dar
+    // pra mandar o push sem precisar adivinhar qual foi o alerta recém
+    // criado com uma segunda consulta.
+    const { data, error } = await supabaseAsUser.rpc("disparar_alerta", {
       p_minha_reserva_id: minha_reserva_id,
     });
     if (error) return json({ error: error.message }, 400);
+
+    const resultado = Array.isArray(data) ? data[0] : data;
+    if (resultado?.unidade_atrasada_id) {
+      // Best effort: se o push falhar por algum motivo, o alerta já foi
+      // registrado normalmente e continua visível na aba Alertas — só a
+      // notificação em si que pode não chegar.
+      await enviarPushParaUnidade(supabaseAdmin, resultado.unidade_atrasada_id, {
+        title: "Alerta de atraso",
+        body: "Sua reserva anterior já passou do horário — outra unidade está aguardando o ponto de carregamento.",
+        url: "/alertas",
+      });
+    }
+
     // Confirmação sem identificar a unidade atrasada (RF-20)
     return json({ ok: true, mensagem: "Alerta enviado de forma anônima." });
   }
