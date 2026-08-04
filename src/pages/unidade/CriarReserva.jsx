@@ -255,16 +255,25 @@ export default function CriarReserva() {
     }
 
     // Bloco noturno fixo (RN-05): sempre 21h-06h, sem duração ajustável.
-    const inicioNoturna = new Date(baseDia);
-    inicioNoturna.setHours(21, 0, 0, 0);
-    if (inicioNoturna > agora && inicioNoturna <= limiteAntecedencia) {
-      const fimNoturna = new Date(inicioNoturna.getTime() + 9 * 60 * 60000);
-      const ocupadoAte = conflitoAte(inicioNoturna, fimNoturna);
+    // O FIM é sempre fixo às 06h (a RPC recalcula isso de verdade — ver
+    // 0009_noturna_fim_fixo_apos_21h.sql). Se o bloco de hoje já começou
+    // (passou das 21h) e ninguém reservou ainda, oferecemos entrar "agora"
+    // em vez de esconder a sugestão até o dia seguinte — melhor aproveitar
+    // o resto da janela do que perder o horário inteiro.
+    const inicioTeoricoNoturna = new Date(baseDia);
+    inicioTeoricoNoturna.setHours(21, 0, 0, 0);
+    const fimNoturna = new Date(inicioTeoricoNoturna.getTime() + 9 * 60 * 60000);
+    const noturnaJaComecouEAindaLivre = offsetDias === 0 && agora > inicioTeoricoNoturna && agora < fimNoturna;
+
+    if ((inicioTeoricoNoturna > agora || noturnaJaComecouEAindaLivre) && inicioTeoricoNoturna <= limiteAntecedencia) {
+      const inicioNoturnaEfetivo = noturnaJaComecouEAindaLivre ? agora : inicioTeoricoNoturna;
+      const ocupadoAte = conflitoAte(inicioNoturnaEfetivo, fimNoturna);
       slots.push({
         chave: "noturna",
         tipo: "noturna",
-        inicio: inicioNoturna,
-        rotulo: "21:00 às 06:00 (noturna)",
+        inicio: inicioNoturnaEfetivo,
+        agoraFixo: noturnaJaComecouEAindaLivre,
+        rotulo: noturnaJaComecouEAindaLivre ? "Agora até 06:00 (noturna)" : "21:00 às 06:00 (noturna)",
         bloqueado: !!ocupadoAte,
         ocupadoAte,
       });
@@ -290,12 +299,19 @@ export default function CriarReserva() {
     }
     if (slot.chave === "noturna") {
       const rotuloDiaMsg = rotuloDiaConfirmacao(diaOffset);
-      const mensagem = `Confirma reserva iniciando ${rotuloDiaMsg} às 21:00h com duração de 540 minutos (21h às 06h do dia seguinte)?`;
+      const mensagem = slot.agoraFixo
+        ? `Confirma reserva noturna a partir de agora até 06:00 de ${rotuloDiaConfirmacao(1)}?`
+        : `Confirma reserva iniciando ${rotuloDiaMsg} às 21:00h com duração de 540 minutos (21h às 06h do dia seguinte)?`;
       if (!confirm(mensagem)) return;
+      // Igual ao slot "Agora" diurno: recalcula o instante exato na hora de
+      // confirmar (com 1 min de folga) em vez do horário já renderizado,
+      // pra não cair no passado por causa do tempo do confirm() do
+      // navegador + rede (ver migration 0006_fix_criar_reserva_no_passado).
+      const inicioReal = slot.agoraFixo ? new Date(Date.now() + 60000) : slot.inicio;
       const { error } = await supabase.rpc("criar_reserva", {
         p_ponto_id: pontoId,
         p_tipo: "noturna",
-        p_inicio: slot.inicio.toISOString(),
+        p_inicio: inicioReal.toISOString(),
         p_duracao_minutos: null,
       });
       if (error) {

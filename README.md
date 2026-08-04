@@ -183,6 +183,7 @@ supabase/
     0006_fix_criar_reserva_no_passado.sql
     0007_remove_codigos_regra_das_mensagens.sql    — mensagens de erro sem código interno (RN-xx) pro usuário final
     0008_ponto_delete_policy.sql                   — RLS de delete em ponto_carregamento (faltava)
+    0009_noturna_fim_fixo_apos_21h.sql              — reserva noturna iniciada após as 21h também termina às 06h (não soma +9h do início)
   functions/
     send-push/    — envia o Web Push (RF-23, RF-24) — envio real ainda comentado, ver seção 8
     alertas/       — disparo/leitura do alerta anônimo (RNF-08)
