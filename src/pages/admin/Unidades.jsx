@@ -187,12 +187,9 @@ export default function AdminUnidades() {
                     </div>
                   </div>
                 ))}
-                <Link to={`/admin/unidades/${u.id}/membros/novo`} className="btn btn-secondary btn-sm" style={{ alignSelf: "flex-start", marginTop: 4 }}>
-                  + Adicionar morador
-                </Link>
               </div>
 
-              <div className="row">
+              <div className="row" style={{ gap: 8 }}>
                 {editandoId === u.id ? (
                   <>
                     <button onClick={() => salvarEdicao(u.id)} className="btn btn-primary btn-sm">Salvar</button>
@@ -200,11 +197,41 @@ export default function AdminUnidades() {
                   </>
                 ) : (
                   <>
-                    <button onClick={() => iniciarEdicao(u)} className="btn btn-secondary btn-sm">
-                      Editar número
+                    <Link
+                      to={`/admin/unidades/${u.id}/membros/novo`}
+                      className="icon-btn"
+                      title="Adicionar morador"
+                      aria-label="Adicionar morador"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="9" cy="8" r="3.5" />
+                        <path d="M2.5 20c0-3.5 3-5.5 6.5-5.5" />
+                        <path d="M17 8v6M14 11h6" />
+                      </svg>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => iniciarEdicao(u)}
+                      className="icon-btn"
+                      title="Editar número"
+                      aria-label="Editar número"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                      </svg>
                     </button>
-                    <button onClick={() => alternarAtivo(u)} className="btn btn-secondary btn-sm">
-                      {u.ativo ? "Desativar" : "Ativar"}
+                    <button
+                      type="button"
+                      onClick={() => alternarAtivo(u)}
+                      className="icon-btn"
+                      title={u.ativo ? "Desativar" : "Ativar"}
+                      aria-label={u.ativo ? "Desativar" : "Ativar"}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2v10" />
+                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                      </svg>
                     </button>
                   </>
                 )}
