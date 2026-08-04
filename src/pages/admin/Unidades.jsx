@@ -148,11 +148,17 @@ export default function AdminUnidades() {
                 {membros.length === 0 && <p className="empty-state" style={{ padding: "4px 0" }}>Nenhum morador cadastrado.</p>}
                 {membros.map((m) => (
                   <div key={m.id} className="historico-item">
-                    <span className="historico-item-texto">
-                      <span className="horario-item-titulo">{m.nome}</span>
-                      <span className="horario-item-sub" style={{ wordBreak: "break-all" }}>{m.email}</span>
+                    <span className="historico-item-icone" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+                      </svg>
                     </span>
-                    <div className="row" style={{ gap: 6 }}>
+                    <div className="historico-item-info">
+                      <strong>{m.nome}</strong>
+                      <div className="historico-item-sub" style={{ wordBreak: "break-all" }}>{m.email}</div>
+                    </div>
+                    <div className="row" style={{ gap: 6, flexShrink: 0 }}>
                       <button
                         type="button"
                         onClick={() => reenviarConvite(m)}
