@@ -122,14 +122,18 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+// Desde a migration 0010, quem loga é um `membro_unidade` — a unidade em
+// si (dona da reserva/dos alertas) é `membro.unidade_id`. Mantém a mesma
+// forma de retorno { id } de antes pra não precisar mexer no resto do
+// arquivo, que só usa `unidade.id`.
 async function unidadeDoChamador(
   supabaseAsUser: ReturnType<typeof createClient>
 ): Promise<{ id: string } | null> {
   const { data: userData } = await supabaseAsUser.auth.getUser();
-  const { data: unidade } = await supabaseAsUser
-    .from("unidade")
-    .select("id")
+  const { data: membro } = await supabaseAsUser
+    .from("membro_unidade")
+    .select("unidade_id")
     .eq("auth_user_id", userData.user?.id)
     .single();
-  return unidade ?? null;
+  return membro ? { id: membro.unidade_id } : null;
 }

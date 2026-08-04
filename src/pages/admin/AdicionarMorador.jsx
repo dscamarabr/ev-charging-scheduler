@@ -1,26 +1,39 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { traduzirErro, extrairErroFuncao } from "../../lib/traduzirErro.js";
 import NavBar from "../../components/NavBar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
 
-// UC-01 (Cadastrar Unidade) — tela própria (antes era um card no fim da
-// lista de Unidades); RLS `unidade_insert_admin` já impede que uma
-// unidade comum acesse esta função mesmo que chegasse na rota.
-export default function NovaUnidade() {
-  const [form, setForm] = useState({ numero: "", nome: "", email: "" });
+// Convida mais um morador (membro_unidade) pra uma unidade que já existe —
+// migration 0010: uma unidade pode ter N membros, todos compartilhando a
+// mesma reserva/vaga (RN-01 é por unidade_id). Mesmo padrão de "cadastro
+// em rota própria" de NovaUnidade.jsx, só que aqui a unidade já existe
+// (vem da URL) em vez de ser criada.
+export default function AdicionarMorador() {
+  const { unidadeId } = useParams();
+  const [unidade, setUnidade] = useState(null);
+  const [form, setForm] = useState({ nome: "", email: "" });
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState(null);
   const navigate = useNavigate();
 
-  async function cadastrar(e) {
+  useEffect(() => {
+    supabase
+      .from("unidade")
+      .select("id, numero")
+      .eq("id", unidadeId)
+      .single()
+      .then(({ data }) => setUnidade(data));
+  }, [unidadeId]);
+
+  async function adicionar(e) {
     e.preventDefault();
     setErro(null);
     setSalvando(true);
     try {
-      const { data, error } = await supabase.functions.invoke("unidades?acao=cadastrar", {
-        body: form,
+      const { data, error } = await supabase.functions.invoke("unidades?acao=adicionar_membro", {
+        body: { unidade_id: unidadeId, ...form },
       });
       if (error || data?.error) {
         setErro(traduzirErro(await extrairErroFuncao(error, data)));
@@ -36,17 +49,13 @@ export default function NovaUnidade() {
     <>
     <NavBar />
     <main className="page">
-      <Breadcrumb itens={[{ texto: "Admin", to: "/admin" }, { texto: "Unidades", to: "/admin/unidades" }, { texto: "Nova Unidade" }]} />
-      <h1 className="section">Nova Unidade</h1>
+      <Breadcrumb itens={[{ texto: "Admin", to: "/admin" }, { texto: "Unidades", to: "/admin/unidades" }, { texto: "Adicionar Morador" }]} />
+      <h1 className="section">Adicionar Morador{unidade ? ` — Unidade ${unidade.numero}` : ""}</h1>
 
       <div className="card">
-        <form onSubmit={cadastrar} className="stack">
+        <form onSubmit={adicionar} className="stack">
           <div className="field">
-            Número
-            <input value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} required />
-          </div>
-          <div className="field">
-            Nome do responsável
+            Nome
             <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required />
           </div>
           <div className="field">

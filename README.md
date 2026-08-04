@@ -71,9 +71,18 @@ self-service — é preciso criar manualmente a primeira conta com
 
 ```sql
 -- Rode no SQL editor do Supabase Studio, após criar o usuário em
--- Authentication > Users > Add user (defina um e-mail e senha)
-insert into unidade (numero, nome_responsavel, email, auth_user_id, admin)
-values ('ADM', 'Síndico', 'sindico@condominio.com', '<auth-user-id-copiado-da-tela>', true);
+-- Authentication > Users > Add user (defina um e-mail e senha).
+-- Desde a migration 0010, uma unidade e seus membros (logins) são
+-- tabelas separadas — precisa dos dois inserts abaixo.
+insert into unidade (numero, admin) values ('ADM', true);
+
+insert into membro_unidade (unidade_id, auth_user_id, nome, email)
+values (
+  (select id from unidade where numero = 'ADM'),
+  '<auth-user-id-copiado-da-tela>',
+  'Síndico',
+  'sindico@condominio.com'
+);
 ```
 
 ---
@@ -184,10 +193,11 @@ supabase/
     0007_remove_codigos_regra_das_mensagens.sql    — mensagens de erro sem código interno (RN-xx) pro usuário final
     0008_ponto_delete_policy.sql                   — RLS de delete em ponto_carregamento (faltava)
     0009_noturna_fim_fixo_apos_21h.sql              — reserva noturna iniciada após as 21h também termina às 06h (não soma +9h do início)
+    0010_membro_unidade.sql                         — múltiplos membros (logins) por unidade — separa unidade de membro_unidade
   functions/
     send-push/    — envia o Web Push (RF-23, RF-24) — envio real ainda comentado, ver seção 8
     alertas/       — disparo/leitura do alerta anônimo (RNF-08)
-    unidades/      — cadastro de unidade (cria conta no Auth + linha em `unidade`)
+    unidades/      — cadastro de unidade/membro (cria conta no Auth + linha em `unidade`/`membro_unidade`)
   config.toml
 
 src/
@@ -196,7 +206,7 @@ src/
   styles/theme.css   — sistema de design "Acolhedor" (cores, componentes reutilizáveis — ver seção 8.1)
   pages/
     unidade/   — Login, AceitarConvite, CriarReserva (tela "Agendar"), MinhasReservas, Alertas, Perfil
-    admin/     — AdminHome (hub), Unidades, NovaUnidade, Pontos, NovoPonto, Historico, Estatistica
+    admin/     — AdminHome (hub), Unidades, NovaUnidade, AdicionarMorador, Pontos, NovoPonto, Historico, Estatistica
   App.jsx, main.jsx
 ```
 
@@ -220,7 +230,14 @@ Em ordem de prioridade prática:
 
 Já resolvido nesta rodada (não é mais TODO): cadastro de unidade via Edge
 Function, seletor de ponto de carregamento em "Agendar", badge "Inativo",
-ordenação numérica de unidades.
+ordenação numérica de unidades, reserva noturna com início após as 21h,
+múltiplos membros (logins) por unidade.
+
+> **Docs desatualizados**: o Modelo de Dados.docx (fora deste repo, pasta
+> irmã) ainda documenta `unidade` com `auth_user_id`/`email`/
+> `nome_responsavel` 1:1 — desde a migration 0010 isso virou a tabela
+> `membro_unidade` (N por unidade). Revisar aquele documento numa próxima
+> rodada.
 
 ### 8.1 Padrões de UI estabelecidos ("padrão" do projeto)
 

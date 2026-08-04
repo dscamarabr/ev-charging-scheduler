@@ -4,14 +4,19 @@ import { traduzirErro } from "../../lib/traduzirErro.js";
 import NavBar from "../../components/NavBar.jsx";
 
 // UC não numerado no scaffold original — tela de autoatendimento pra
-// qualquer unidade ver/editar seus próprios dados e trocar a senha.
-// Número e e-mail ficam só leitura aqui: número é identidade da unidade
-// (mudança é operação administrativa) e trocar e-mail mexeria também no
-// Supabase Auth (fluxo de confirmação por e-mail) — fora do escopo por ora.
+// qualquer morador ver/editar os próprios dados e trocar a senha.
+//
+// Desde a migration 0010, quem loga é um `membro_unidade` (pode haver mais
+// de um por unidade, ex.: casal) — o número da unidade continua só
+// leitura aqui (é identidade da unidade, mudança é operação
+// administrativa) e o e-mail também (trocar e-mail mexeria no Supabase
+// Auth, fora do escopo por ora). O nome agora é do PRÓPRIO membro, não
+// mais "o responsável da unidade" — cada um edita só o seu.
 export default function Perfil() {
   const [carregando, setCarregando] = useState(true);
-  const [unidade, setUnidade] = useState(null);
-  const [nomeResponsavel, setNomeResponsavel] = useState("");
+  const [membro, setMembro] = useState(null);
+  const [numeroUnidade, setNumeroUnidade] = useState("");
+  const [nome, setNome] = useState("");
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [erroPerfil, setErroPerfil] = useState(null);
   const [sucessoPerfil, setSucessoPerfil] = useState(false);
@@ -30,12 +35,13 @@ export default function Perfil() {
       } = await supabase.auth.getUser();
       if (!user) return;
       const { data } = await supabase
-        .from("unidade")
-        .select("*")
+        .from("membro_unidade")
+        .select("*, unidade(numero)")
         .eq("auth_user_id", user.id)
         .single();
-      setUnidade(data);
-      setNomeResponsavel(data?.nome_responsavel ?? "");
+      setMembro(data);
+      setNome(data?.nome ?? "");
+      setNumeroUnidade(data?.unidade?.numero ?? "");
       setCarregando(false);
     }
     carregar();
@@ -48,14 +54,14 @@ export default function Perfil() {
     setSalvandoPerfil(true);
     try {
       const { error } = await supabase
-        .from("unidade")
-        .update({ nome_responsavel: nomeResponsavel })
-        .eq("id", unidade.id);
+        .from("membro_unidade")
+        .update({ nome })
+        .eq("id", membro.id);
       if (error) {
         setErroPerfil(traduzirErro(error.message));
         return;
       }
-      setUnidade({ ...unidade, nome_responsavel: nomeResponsavel });
+      setMembro({ ...membro, nome });
       setSucessoPerfil(true);
     } finally {
       setSalvandoPerfil(false);
@@ -82,7 +88,7 @@ export default function Perfil() {
       // trocar — evita que uma sessão esquecida aberta troque a senha sem
       // reautenticar (Supabase não exige a senha antiga por padrão).
       const { error: reauthError } = await supabase.auth.signInWithPassword({
-        email: unidade.email,
+        email: membro.email,
         password: senhaAtual,
       });
       if (reauthError) {
@@ -112,9 +118,9 @@ export default function Perfil() {
       <main className="page page--narrow">
         <h1 className="section">Meu Perfil</h1>
 
-        {!unidade && <p className="form-error">Não foi possível carregar os dados da unidade.</p>}
+        {!membro && <p className="form-error">Não foi possível carregar seus dados.</p>}
 
-        {unidade && (
+        {membro && (
           <div className="stack" style={{ gap: 20 }}>
             <div className="card">
               <div className="card-header">
@@ -125,24 +131,24 @@ export default function Perfil() {
                   </svg>
                 </span>
                 <div>
-                  <h2>Dados da unidade</h2>
-                  <p className="card-header-subtitle">Informações que identificam sua unidade no condomínio</p>
+                  <h2>Meus dados</h2>
+                  <p className="card-header-subtitle">Sua unidade e seus dados de contato</p>
                 </div>
               </div>
               <form onSubmit={salvarPerfil} className="stack">
                 <div className="field">
                   Número da unidade
-                  <input value={unidade.numero} disabled />
+                  <input value={numeroUnidade} disabled />
                 </div>
                 <div className="field">
                   E-mail
-                  <input value={unidade.email} disabled />
+                  <input value={membro.email} disabled />
                 </div>
                 <div className="field">
-                  Nome do responsável
+                  Nome
                   <input
-                    value={nomeResponsavel}
-                    onChange={(e) => setNomeResponsavel(e.target.value)}
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
                     required
                   />
                 </div>
