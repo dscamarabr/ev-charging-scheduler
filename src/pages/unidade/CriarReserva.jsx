@@ -248,17 +248,22 @@ export default function CriarReserva() {
     const [horaFechamento] = config.horario_fechamento.split(":").map(Number);
     const slots = [];
 
-    // "Agora" — só faz sentido no dia de hoje, dentro do expediente e se o
-    // ponto não estiver ocupado neste exato instante.
+    // "Agora" — só faz sentido no dia de hoje, dentro do expediente. Se o
+    // ponto estiver ocupado neste exato instante (ex.: outra unidade em
+    // andamento até 13:53, com "agora" sendo 13:26), o slot continua
+    // aparecendo — só que marcado como ocupado, igual às sugestões de hora
+    // cheia — em vez de simplesmente sumir até a próxima hora cheia
+    // disponível. Ao tocar, o modal já abre resolvido pro instante exato em
+    // que o ponto fica livre (ver tocarSugestao/abrirModal).
     if (offsetDias === 0) {
       const horaAtual = agora.getHours() + agora.getMinutes() / 60;
-      if (horaAtual >= horaAbertura && horaAtual < horaFechamento && !ocupadoNoInstante(agora)) {
+      if (horaAtual >= horaAbertura && horaAtual < horaFechamento) {
         slots.push({
           chave: "agora",
           tipo: "diurna",
           inicio: agora,
           rotulo: "Agora",
-          ocupadoAte: null,
+          ocupadoAte: ocupadoNoInstante(agora),
         });
       }
     }
@@ -356,7 +361,12 @@ export default function CriarReserva() {
       return;
     }
 
-    abrirModal(slot.inicio, slot.chave === "agora");
+    // O truque de "usar o instante exato do clique de confirmação" (ver
+    // abrirModal/confirmarModal) só faz sentido quando o ponto está livre
+    // agora de verdade — se "Agora" está ocupado, tratamos como um horário
+    // normal: abrirModal já resolve pro próximo instante livre (13:54, no
+    // exemplo acima) via proximoInicioLivre.
+    abrirModal(slot.inicio, slot.chave === "agora" && !slot.ocupadoAte);
   }
 
   // Combina o dia escolhido (chips) com o horário do modal (aceita minutos
