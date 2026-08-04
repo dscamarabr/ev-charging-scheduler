@@ -100,19 +100,43 @@ export default function CriarReserva() {
       setReservasDoPonto([]);
       return;
     }
+
     // Janela de busca cobre o período em que ainda dá pra reservar
     // (RN-02: até 7 dias de antecedência), com uma folga de 1 dia pra
     // cobrir o fim de uma reserva noturna que começou no limite.
-    const agora = new Date();
-    const limite = new Date(agora.getTime() + 8 * 24 * 60 * 60 * 1000);
-    supabase
-      .from("reserva")
-      .select("inicio_previsto, fim_previsto, fim_real")
-      .eq("ponto_id", pontoId)
-      .neq("status", "cancelada")
-      .lte("inicio_previsto", limite.toISOString())
-      .gte("fim_previsto", agora.toISOString())
-      .then(({ data }) => setReservasDoPonto(data ?? []));
+    async function buscarReservas() {
+      const agora = new Date();
+      const limite = new Date(agora.getTime() + 8 * 24 * 60 * 60 * 1000);
+      const { data } = await supabase
+        .from("reserva")
+        .select("inicio_previsto, fim_previsto, fim_real")
+        .eq("ponto_id", pontoId)
+        .neq("status", "cancelada")
+        .lte("inicio_previsto", limite.toISOString())
+        .gte("fim_previsto", agora.toISOString());
+      setReservasDoPonto(data ?? []);
+    }
+
+    buscarReservas();
+
+    // A lista de reservas de outras unidades não atualiza sozinha (sem
+    // isso, quem deixasse a tela aberta continuaria vendo um horário como
+    // "disponível" mesmo depois de outra unidade tê-lo reservado — só
+    // descobria o conflito de verdade ao tentar confirmar, já que a
+    // validação real acontece no servidor). Refaz a busca periodicamente
+    // e sempre que a aba volta a ficar em primeiro plano.
+    const intervalo = setInterval(buscarReservas, 20000);
+    function aoFocar() {
+      if (document.visibilityState === "visible") buscarReservas();
+    }
+    document.addEventListener("visibilitychange", aoFocar);
+    window.addEventListener("focus", buscarReservas);
+
+    return () => {
+      clearInterval(intervalo);
+      document.removeEventListener("visibilitychange", aoFocar);
+      window.removeEventListener("focus", buscarReservas);
+    };
   }, [pontoId]);
 
   useEffect(() => {
