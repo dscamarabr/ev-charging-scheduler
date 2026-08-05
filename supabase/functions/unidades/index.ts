@@ -21,6 +21,7 @@
 //   POST /unidades?acao=excluir          { membro_id }                        — remove um morador (não o último da unidade)
 //   GET  /unidades?acao=status_membros                                        — quais auth_user_id já ativaram a conta (ver tela Unidades)
 //   POST /unidades?acao=alternar_admin   { membro_id, admin }                  — concede/remove admin de um morador (não o último do sistema)
+//   POST /unidades?acao=excluir_unidade  { unidade_id }                        — apaga a unidade e seus moradores (só se não houver reserva/alerta)
 //
 // Deploy: supabase functions deploy unidades
 
@@ -259,6 +260,95 @@ Deno.serve(async (req) => {
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(membro.auth_user_id);
     if (deleteError) {
       return json({ error: `Falha ao remover: ${traduzirErroAuth(deleteError.message)}` }, 400);
+    }
+
+    return json({ ok: true });
+  }
+
+  if (acao === "excluir_unidade" && req.method === "POST") {
+    const { data: isAdmin, error: adminError } = await supabaseAsUser.rpc("is_admin");
+    if (adminError || !isAdmin) {
+      return json({ error: "Apenas o síndico pode excluir unidades." }, 403);
+    }
+
+    const { unidade_id } = await req.json();
+    if (!unidade_id) {
+      return json({ error: "unidade_id é obrigatório." }, 400);
+    }
+
+    const { data: unidade, error: buscaError } = await supabaseAdmin
+      .from("unidade")
+      .select("id, numero")
+      .eq("id", unidade_id)
+      .single();
+    if (buscaError || !unidade) {
+      return json({ error: "Unidade não encontrada." }, 404);
+    }
+
+    // Exclusão só é permitida pra unidade "virgem" (nunca reservou nem
+    // disparou/recebeu alerta) — reserva.unidade_id e
+    // alerta.unidade_solicitante_id são FKs sem "on delete cascade" de
+    // propósito, exatamente pra preservar o histórico (RNF-09) e as telas
+    // de Histórico/Estatística, que exibem unidade.numero. Uma unidade com
+    // histórico só pode ser desativada, nunca excluída.
+    const [{ count: totalReservas }, { count: totalAlertas }] = await Promise.all([
+      supabaseAdmin.from("reserva").select("id", { count: "exact", head: true }).eq("unidade_id", unidade_id),
+      supabaseAdmin
+        .from("alerta")
+        .select("id", { count: "exact", head: true })
+        .eq("unidade_solicitante_id", unidade_id),
+    ]);
+    if ((totalReservas ?? 0) > 0 || (totalAlertas ?? 0) > 0) {
+      return json(
+        {
+          error:
+            "Esta unidade já tem histórico de reservas ou alertas e não pode ser excluída — desative-a em vez disso.",
+        },
+        409
+      );
+    }
+
+    const { data: membros } = await supabaseAdmin
+      .from("membro_unidade")
+      .select("id, auth_user_id, admin")
+      .eq("unidade_id", unidade_id);
+
+    // Salvaguarda: se essa unidade contém o único admin do sistema, apagar
+    // seus moradores deixaria o painel administrativo inacessível pra
+    // sempre (mesmo princípio de RI-10, já aplicado em alternar_admin).
+    const adminsAqui = (membros ?? []).filter((m) => m.admin).length;
+    if (adminsAqui > 0) {
+      const { count: totalAdmins } = await supabaseAdmin
+        .from("membro_unidade")
+        .select("id", { count: "exact", head: true })
+        .eq("admin", true);
+      if ((totalAdmins ?? 0) - adminsAqui < 1) {
+        return json(
+          {
+            error:
+              "Esta unidade contém o único administrador do sistema — torne outro morador administrador antes de excluí-la.",
+          },
+          409
+        );
+      }
+    }
+
+    // Apaga cada morador pelo Auth (cascade-apaga membro_unidade e
+    // push_subscription), igual à ação `excluir` de morador — só depois
+    // apaga a linha de `unidade` em si, já sem nenhum morador vinculado.
+    for (const m of membros ?? []) {
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(m.auth_user_id);
+      if (deleteError) {
+        return json(
+          { error: `Falha ao remover morador durante a exclusão: ${traduzirErroAuth(deleteError.message)}` },
+          400
+        );
+      }
+    }
+
+    const { error: excluirError } = await supabaseAdmin.from("unidade").delete().eq("id", unidade_id);
+    if (excluirError) {
+      return json({ error: `Falha ao excluir unidade: ${traduzirErroAuth(excluirError.message)}` }, 400);
     }
 
     return json({ ok: true });

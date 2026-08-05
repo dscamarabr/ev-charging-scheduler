@@ -101,6 +101,30 @@ export default function AdminUnidades() {
     }
   }
 
+  async function excluirUnidade(u) {
+    if (
+      !confirm(
+        `Excluir a Unidade ${u.numero} e todos os seus moradores? Isso não pode ser desfeito. Só funciona se a unidade nunca tiver reserva ou alerta registrado — caso contrário, desative-a.`
+      )
+    )
+      return;
+    setErro(null);
+    setSucesso(null);
+    setAcaoEmAndamento(u.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("unidades?acao=excluir_unidade", {
+        body: { unidade_id: u.id },
+      });
+      if (error || data?.error) {
+        setErro(traduzirErro(await extrairErroFuncao(error, data)));
+        return;
+      }
+      await carregar();
+    } finally {
+      setAcaoEmAndamento(null);
+    }
+  }
+
   async function alternarAdmin(m) {
     const novoValor = !m.admin;
     const mensagem = novoValor
@@ -288,6 +312,21 @@ export default function AdminUnidades() {
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 2v10" />
                         <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => excluirUnidade(u)}
+                      disabled={acaoEmAndamento === u.id}
+                      className="icon-btn"
+                      title="Excluir unidade (só sem histórico)"
+                      aria-label="Excluir unidade"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 7h16" />
+                        <path d="M9 7V4h6v3" />
+                        <path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" />
+                        <path d="M10 11v6M14 11v6" />
                       </svg>
                     </button>
                   </>
