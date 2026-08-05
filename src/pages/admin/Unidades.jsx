@@ -165,7 +165,6 @@ export default function AdminUnidades() {
                         <strong>{m.nome}</strong>
                         <MembroStatusBadge ativado={ativados.has(m.auth_user_id)} />
                       </div>
-                      <div className="historico-item-sub" style={{ wordBreak: "break-all" }}>{m.email}</div>
                     </div>
                     <div className="row" style={{ gap: 6, flexShrink: 0 }}>
                       <button
