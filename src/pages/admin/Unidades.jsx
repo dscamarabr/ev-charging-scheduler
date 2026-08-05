@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { traduzirErro, extrairErroFuncao } from "../../lib/traduzirErro.js";
 import { compararNumero } from "../../lib/compararNumero.js";
-import { AtivoBadge, MembroStatusBadge } from "../../components/StatusBadge.jsx";
+import { AtivoBadge, MembroStatusBadge, MembroAdminBadge } from "../../components/StatusBadge.jsx";
 import NavBar from "../../components/NavBar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
 
@@ -90,6 +90,28 @@ export default function AdminUnidades() {
     }
   }
 
+  async function alternarAdmin(m) {
+    const novoValor = !m.admin;
+    const mensagem = novoValor
+      ? `Tornar ${m.nome} administrador(a)? Vai passar a ter acesso completo ao painel administrativo.`
+      : `Remover privilégio de administrador de ${m.nome}?`;
+    if (!confirm(mensagem)) return;
+    setErro(null);
+    setAcaoEmAndamento(m.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("unidades?acao=alternar_admin", {
+        body: { membro_id: m.id, admin: novoValor },
+      });
+      if (error || data?.error) {
+        setErro(traduzirErro(await extrairErroFuncao(error, data)));
+        return;
+      }
+      await carregar();
+    } finally {
+      setAcaoEmAndamento(null);
+    }
+  }
+
   async function removerMembro(m) {
     if (!confirm(`Remover ${m.nome} (${m.email}) desta unidade? Isso não pode ser desfeito.`)) return;
     setErro(null);
@@ -163,10 +185,23 @@ export default function AdminUnidades() {
                     <div className="historico-item-info">
                       <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                         <strong>{m.nome}</strong>
+                        <MembroAdminBadge admin={m.admin} />
                         <MembroStatusBadge ativado={ativados.has(m.auth_user_id)} />
                       </div>
                     </div>
                     <div className="row" style={{ gap: 6, flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => alternarAdmin(m)}
+                        disabled={acaoEmAndamento === m.id}
+                        className="icon-btn"
+                        title={m.admin ? "Remover privilégio de administrador" : "Tornar administrador"}
+                        aria-label={m.admin ? "Remover privilégio de administrador" : "Tornar administrador"}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill={m.admin ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7l7-4z" />
+                        </svg>
+                      </button>
                       <button
                         type="button"
                         onClick={() => reenviarConvite(m)}

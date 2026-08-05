@@ -1,6 +1,6 @@
 // scripts/seed-admin.mjs
 //
-// Cria o primeiro síndico (unidade com admin = true) no ambiente local.
+// Cria o primeiro síndico (membro_unidade com admin = true) no ambiente local.
 // Substitui o passo manual descrito no README (seção "Criando o primeiro
 // síndico"): cria o usuário direto no Supabase Auth via Admin API e insere
 // a linha correspondente em `unidade`, numa única chamada.
@@ -58,17 +58,13 @@ async function main() {
   }
 
   const authUserId = authData.user.id;
-  console.log(`Usuário criado (auth_user_id = ${authUserId}). Inserindo em 'unidade'...`);
+  console.log(`Usuário criado (auth_user_id = ${authUserId}). Inserindo em 'unidade' e 'membro_unidade'...`);
 
+  // Desde a migration 0010, "unidade" só guarda numero/ativo — quem loga
+  // (e, desde a 0016, quem é admin) é `membro_unidade`.
   const { data: unidade, error: unidadeError } = await supabaseAdmin
     .from("unidade")
-    .insert({
-      numero,
-      nome_responsavel: nomeResponsavel,
-      email,
-      auth_user_id: authUserId,
-      admin: true,
-    })
+    .insert({ numero })
     .select()
     .single();
 
@@ -79,8 +75,27 @@ async function main() {
     );
   }
 
+  const { data: membro, error: membroError } = await supabaseAdmin
+    .from("membro_unidade")
+    .insert({
+      unidade_id: unidade.id,
+      auth_user_id: authUserId,
+      nome: nomeResponsavel,
+      email,
+      admin: true,
+    })
+    .select()
+    .single();
+
+  if (membroError) {
+    throw new Error(
+      `Unidade criada (id ${unidade.id}), mas falhou ao inserir em 'membro_unidade': ${membroError.message}\n` +
+        "Você pode inserir manualmente depois com esse auth_user_id/unidade_id."
+    );
+  }
+
   console.log("Síndico criado com sucesso:");
-  console.log(unidade);
+  console.log({ unidade, membro });
   console.log(`\nJá pode fazer login em http://localhost:5173 com ${email} / a senha informada.`);
 }
 

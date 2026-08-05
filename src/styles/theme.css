@@ -986,6 +986,11 @@ label {
   color: var(--color-neutral-text);
 }
 
+.badge-primary {
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
+}
+
 /* Tabelas --------------------------------------------------------------- */
 
 .table {

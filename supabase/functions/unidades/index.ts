@@ -20,6 +20,7 @@
 //   POST /unidades?acao=reenviar         { membro_id }                        — reenvia convite (só se ainda não definiu senha)
 //   POST /unidades?acao=excluir          { membro_id }                        — remove um morador (não o último da unidade)
 //   GET  /unidades?acao=status_membros                                        — quais auth_user_id já ativaram a conta (ver tela Unidades)
+//   POST /unidades?acao=alternar_admin   { membro_id, admin }                  — concede/remove admin de um morador (não o último do sistema)
 //
 // Deploy: supabase functions deploy unidades
 
@@ -261,6 +262,48 @@ Deno.serve(async (req) => {
     }
 
     return json({ ok: true });
+  }
+
+  if (acao === "alternar_admin" && req.method === "POST") {
+    const { data: isAdminCaller, error: adminError } = await supabaseAsUser.rpc("is_admin");
+    if (adminError || !isAdminCaller) {
+      return json({ error: "Apenas o síndico pode alterar privilégios de administrador." }, 403);
+    }
+
+    const { membro_id, admin } = await req.json();
+    if (typeof admin !== "boolean" || !membro_id) {
+      return json({ error: "membro_id e admin (true/false) são obrigatórios." }, 400);
+    }
+
+    // Salvaguarda: nunca deixar o sistema sem NENHUM admin (ninguém mais
+    // conseguiria acessar o painel pra desfazer) — mesmo padrão de "não
+    // remover o último morador da unidade" já usado em `excluir`.
+    if (admin === false) {
+      const { data: alvo } = await supabaseAdmin
+        .from("membro_unidade")
+        .select("admin")
+        .eq("id", membro_id)
+        .single();
+      const { count: totalAdmins } = await supabaseAdmin
+        .from("membro_unidade")
+        .select("id", { count: "exact", head: true })
+        .eq("admin", true);
+      if (alvo?.admin && (totalAdmins ?? 0) <= 1) {
+        return json({ error: "Não é possível remover o único administrador do sistema." }, 409);
+      }
+    }
+
+    const { data: membro, error } = await supabaseAdmin
+      .from("membro_unidade")
+      .update({ admin })
+      .eq("id", membro_id)
+      .select()
+      .single();
+    if (error) {
+      return json({ error: `Falha ao atualizar privilégio: ${traduzirErroAuth(error.message)}` }, 400);
+    }
+
+    return json({ ok: true, membro });
   }
 
   if (acao === "status_membros" && req.method === "GET") {

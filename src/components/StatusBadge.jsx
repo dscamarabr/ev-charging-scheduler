@@ -30,3 +30,12 @@ export function MembroStatusBadge({ ativado }) {
   if (ativado) return null;
   return <span className="badge badge-warning">Convite pendente</span>;
 }
+
+// Desde a migration 0016, admin é atributo do MEMBRO (não mais da
+// unidade inteira) — ver Unidades.jsx e unidades/index.ts (ação
+// alternar_admin). Cor de marca (dourado) em vez das cores de status,
+// porque isso é um papel/identidade, não uma situação boa ou ruim.
+export function MembroAdminBadge({ admin }) {
+  if (!admin) return null;
+  return <span className="badge badge-primary">Admin</span>;
+}
