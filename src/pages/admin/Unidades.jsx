@@ -21,6 +21,12 @@ export default function AdminUnidades() {
   const [membrosPorUnidade, setMembrosPorUnidade] = useState({});
   const [ativados, setAtivados] = useState(new Set());
   const [erro, setErro] = useState(null);
+  // Só usado pelo reenvio de convite (única ação desta tela que dispara
+  // e-mail) — limpo no início de TODAS as ações pra uma mensagem antiga
+  // nunca ficar visível durante/depois de outra ação sem relação com ela.
+  // Some sozinho depois de alguns segundos porque, diferente de
+  // NovaUnidade/AdicionarMorador, esta tela não navega pra outro lugar.
+  const [sucesso, setSucesso] = useState(null);
   const [acaoEmAndamento, setAcaoEmAndamento] = useState(null); // id (unidade ou membro) sofrendo ação
   const [editandoId, setEditandoId] = useState(null);
   const [numeroEdicao, setNumeroEdicao] = useState("");
@@ -48,6 +54,7 @@ export default function AdminUnidades() {
   }, []);
 
   async function alternarAtivo(u) {
+    setSucesso(null);
     await supabase.from("unidade").update({ ativo: !u.ativo }).eq("id", u.id);
     carregar();
   }
@@ -63,6 +70,7 @@ export default function AdminUnidades() {
 
   async function salvarEdicao(id) {
     setErro(null);
+    setSucesso(null);
     const { error } = await supabase.from("unidade").update({ numero: numeroEdicao }).eq("id", id);
     if (error) {
       setErro(traduzirErro(error.message));
@@ -75,6 +83,7 @@ export default function AdminUnidades() {
   async function reenviarConvite(m) {
     if (!confirm(`Reenviar convite para ${m.email}? Só funciona se essa conta nunca definiu senha.`)) return;
     setErro(null);
+    setSucesso(null);
     setAcaoEmAndamento(m.id);
     try {
       const { data, error } = await supabase.functions.invoke("unidades?acao=reenviar", {
@@ -84,6 +93,8 @@ export default function AdminUnidades() {
         setErro(traduzirErro(await extrairErroFuncao(error, data)));
         return;
       }
+      setSucesso("Email enviado com sucesso!");
+      setTimeout(() => setSucesso(null), 4000);
       await carregar();
     } finally {
       setAcaoEmAndamento(null);
@@ -97,6 +108,7 @@ export default function AdminUnidades() {
       : `Remover privilégio de administrador de ${m.nome}?`;
     if (!confirm(mensagem)) return;
     setErro(null);
+    setSucesso(null);
     setAcaoEmAndamento(m.id);
     try {
       const { data, error } = await supabase.functions.invoke("unidades?acao=alternar_admin", {
@@ -115,6 +127,7 @@ export default function AdminUnidades() {
   async function removerMembro(m) {
     if (!confirm(`Remover ${m.nome} (${m.email}) desta unidade? Isso não pode ser desfeito.`)) return;
     setErro(null);
+    setSucesso(null);
     setAcaoEmAndamento(m.id);
     try {
       const { data, error } = await supabase.functions.invoke("unidades?acao=excluir", {
@@ -152,6 +165,7 @@ export default function AdminUnidades() {
       </div>
 
       {erro && <p className="form-error" style={{ marginBottom: 16 }}>{erro}</p>}
+      {sucesso && <p className="form-success" style={{ marginBottom: 16 }}>{sucesso}</p>}
 
       <div className="stack" style={{ marginBottom: 32 }}>
         {unidades.length === 0 && <p className="empty-state">Nenhuma unidade cadastrada.</p>}

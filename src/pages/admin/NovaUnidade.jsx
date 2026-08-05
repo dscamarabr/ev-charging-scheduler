@@ -12,11 +12,13 @@ export default function NovaUnidade() {
   const [form, setForm] = useState({ numero: "", nome: "", email: "" });
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState(null);
+  const [sucesso, setSucesso] = useState(false);
   const navigate = useNavigate();
 
   async function cadastrar(e) {
     e.preventDefault();
     setErro(null);
+    setSucesso(false);
     setSalvando(true);
     try {
       const { data, error } = await supabase.functions.invoke("unidades?acao=cadastrar", {
@@ -26,7 +28,11 @@ export default function NovaUnidade() {
         setErro(traduzirErro(await extrairErroFuncao(error, data)));
         return;
       }
-      navigate("/admin/unidades");
+      // Mostra a confirmação por um instante antes de sair da tela — sem
+      // isso, o síndico nunca via nenhum feedback de que o e-mail de
+      // convite realmente foi disparado.
+      setSucesso(true);
+      setTimeout(() => navigate("/admin/unidades"), 1200);
     } finally {
       setSalvando(false);
     }
@@ -54,8 +60,9 @@ export default function NovaUnidade() {
             <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
           </div>
           {erro && <p className="form-error">{erro}</p>}
+          {sucesso && <p className="form-success">Email enviado com sucesso!</p>}
           <div className="row">
-            <button type="submit" className="btn btn-primary" disabled={salvando}>
+            <button type="submit" className="btn btn-primary" disabled={salvando || sucesso}>
               {salvando ? "Salvando..." : "Salvar"}
             </button>
             <button type="button" onClick={() => navigate("/admin/unidades")} className="btn btn-secondary">
