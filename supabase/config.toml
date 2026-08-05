@@ -30,6 +30,13 @@ enable_signup = false
 
 [auth.email]
 enable_confirmations = true
+# Validade do link/código de convite (e de outros e-mails de auth, como
+# recuperação de senha) — mesmo campo controla os dois. Ajustado de 1h
+# (padrão) pra 24h em 2026-08 porque conta pendente pode levar mais
+# tempo pra ser aceita. Precisa ser replicado manualmente no dashboard
+# do projeto (Authentication → Providers → Email), esse arquivo só
+# reflete/documenta o valor.
+otp_expiry = 86400
 
 [auth.email.template.invite]
 subject = "Você foi convidado(a) para o Grand Soleil"
