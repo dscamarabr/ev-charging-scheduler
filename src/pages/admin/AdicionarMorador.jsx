@@ -50,7 +50,14 @@ export default function AdicionarMorador() {
     <NavBar />
     <main className="page">
       <Breadcrumb itens={[{ texto: "Admin", to: "/admin" }, { texto: "Unidades", to: "/admin/unidades" }, { texto: "Adicionar Morador" }]} />
-      <h1 className="section">Adicionar Morador{unidade ? ` — Unidade ${unidade.numero}` : ""}</h1>
+      {/* Título curto e fixo — o número da unidade vira subtítulo em vez de
+          ser concatenado no h1, que quebrava linha no meio em telas
+          estreitas de celular (única tela do projeto que grudava um sufixo
+          dinâmico direto no título). */}
+      <h1 className="section" style={{ marginBottom: unidade ? 4 : 32 }}>Adicionar Morador</h1>
+      {unidade && (
+        <p className="card-header-subtitle" style={{ marginBottom: 20 }}>Unidade {unidade.numero}</p>
+      )}
 
       <div className="card">
         <form onSubmit={adicionar} className="stack">

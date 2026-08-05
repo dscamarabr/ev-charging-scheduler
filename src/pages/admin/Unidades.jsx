@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { traduzirErro, extrairErroFuncao } from "../../lib/traduzirErro.js";
 import { compararNumero } from "../../lib/compararNumero.js";
-import { AtivoBadge } from "../../components/StatusBadge.jsx";
+import { AtivoBadge, MembroStatusBadge } from "../../components/StatusBadge.jsx";
 import NavBar from "../../components/NavBar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
 
@@ -19,15 +19,17 @@ import Breadcrumb from "../../components/Breadcrumb.jsx";
 export default function AdminUnidades() {
   const [unidades, setUnidades] = useState([]);
   const [membrosPorUnidade, setMembrosPorUnidade] = useState({});
+  const [ativados, setAtivados] = useState(new Set());
   const [erro, setErro] = useState(null);
   const [acaoEmAndamento, setAcaoEmAndamento] = useState(null); // id (unidade ou membro) sofrendo ação
   const [editandoId, setEditandoId] = useState(null);
   const [numeroEdicao, setNumeroEdicao] = useState("");
 
   async function carregar() {
-    const [{ data: unidadesData }, { data: membrosData }] = await Promise.all([
+    const [{ data: unidadesData }, { data: membrosData }, statusResp] = await Promise.all([
       supabase.from("unidade").select("*"),
       supabase.from("membro_unidade").select("*").order("criado_em"),
+      supabase.functions.invoke("unidades?acao=status_membros", { method: "GET" }),
     ]);
     setUnidades((unidadesData ?? []).sort((a, b) => compararNumero(a.numero, b.numero)));
     const agrupado = {};
@@ -35,6 +37,10 @@ export default function AdminUnidades() {
       (agrupado[m.unidade_id] ??= []).push(m);
     }
     setMembrosPorUnidade(agrupado);
+    // Quem já aceitou o convite e definiu senha (last_sign_in_at preenchido
+    // no Auth) — usado só pro badge "Convite pendente". Falha aqui não
+    // impede o resto da tela de funcionar, só deixa de mostrar o badge.
+    setAtivados(new Set(statusResp?.data?.ativados ?? []));
   }
 
   useEffect(() => {
@@ -155,7 +161,10 @@ export default function AdminUnidades() {
                       </svg>
                     </span>
                     <div className="historico-item-info">
-                      <strong>{m.nome}</strong>
+                      <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        <strong>{m.nome}</strong>
+                        <MembroStatusBadge ativado={ativados.has(m.auth_user_id)} />
+                      </div>
                       <div className="historico-item-sub" style={{ wordBreak: "break-all" }}>{m.email}</div>
                     </div>
                     <div className="row" style={{ gap: 6, flexShrink: 0 }}>

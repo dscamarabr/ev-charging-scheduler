@@ -20,3 +20,13 @@ export function AtivoBadge({ ativo }) {
     </span>
   );
 }
+
+// Indica se um MORADOR (não a unidade) já aceitou o convite e definiu
+// senha — ver Unidades.jsx e unidades/index.ts (ação status_membros).
+// Só aparece pra quem ainda está pendente: o caso comum (já ativou) não
+// precisa de destaque nenhum, e "Pendente" em âmbar evita confundir com
+// o vermelho já usado pra "Inativo" (situação da unidade, não da pessoa).
+export function MembroStatusBadge({ ativado }) {
+  if (ativado) return null;
+  return <span className="badge badge-warning">Convite pendente</span>;
+}

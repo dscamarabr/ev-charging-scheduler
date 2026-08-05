@@ -19,6 +19,7 @@
 //   POST /unidades?acao=adicionar_membro { unidade_id, nome, email }          — convida +1 morador pra unidade já existente
 //   POST /unidades?acao=reenviar         { membro_id }                        — reenvia convite (só se ainda não definiu senha)
 //   POST /unidades?acao=excluir          { membro_id }                        — remove um morador (não o último da unidade)
+//   GET  /unidades?acao=status_membros                                        — quais auth_user_id já ativaram a conta (ver tela Unidades)
 //
 // Deploy: supabase functions deploy unidades
 
@@ -35,7 +36,7 @@ const siteUrl = Deno.env.get("SITE_URL") ?? "http://localhost:5173";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 // As mensagens acima (nossas) já estão em português, mas os erros que
@@ -260,6 +261,26 @@ Deno.serve(async (req) => {
     }
 
     return json({ ok: true });
+  }
+
+  if (acao === "status_membros" && req.method === "GET") {
+    const { data: isAdmin, error: adminError } = await supabaseAsUser.rpc("is_admin");
+    if (adminError || !isAdmin) {
+      return json({ error: "Apenas o síndico pode ver isso." }, 403);
+    }
+
+    // Mesmo critério de "já ativou" usado em unidadeJaAtivou() (last_sign_in_at
+    // preenchido), mas de uma vez só pra tela inteira em vez de 1 chamada por
+    // morador — listUsers() já devolve todos os usuários do projeto (a escala
+    // de um condomínio, algumas dezenas de contas, cabe tranquilo numa página
+    // só; se um dia crescer muito, paginar aqui).
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (error) {
+      return json({ error: `Falha ao consultar status: ${traduzirErroAuth(error.message)}` }, 400);
+    }
+
+    const ativados = (data?.users ?? []).filter((u) => !!u.last_sign_in_at).map((u) => u.id);
+    return json({ ativados });
   }
 
   return json({ error: "Ação inválida" }, 400);
