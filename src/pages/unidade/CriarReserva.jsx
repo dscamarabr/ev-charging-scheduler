@@ -157,6 +157,12 @@ export default function CriarReserva() {
 
   const pontoSelecionado = pontos.find((p) => p.id === pontoId);
 
+  // RN-13: mesmo tratamento visual de "já tem reserva ativa" — some a
+  // lista de horários e mostra um card explicando o motivo, em vez de
+  // deixar a unidade tentar reservar e só descobrir o bloqueio ao
+  // confirmar (a validação de verdade continua em criar_reserva).
+  const limiteAtingido = !!usoSemanal && usoSemanal.usados >= usoSemanal.limite;
+
   // Fim "de verdade" de uma reserva: se ela já foi encerrada (liberação
   // manual antecipada — RF-16 — ou o job automático de fim de janela),
   // fim_real é o horário real em que o ponto ficou livre, que pode ser
@@ -483,7 +489,29 @@ export default function CriarReserva() {
         </div>
       )}
 
-      {pontos.length > 0 && !reservaAtiva && (
+      {pontos.length > 0 && !reservaAtiva && limiteAtingido && (
+        <div className="reserva-hero">
+          <div className="row" style={{ gap: 12, alignItems: "center" }}>
+            <div className="reserva-bloqueada-icone">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
+                <path d="m9.5 15.5 5 5M14.5 15.5l-5 5" />
+              </svg>
+            </div>
+            <div className="reserva-hero-titulo">Limite semanal atingido</div>
+          </div>
+          <div className="reserva-hero-progresso-legenda" style={{ marginTop: 14 }}>
+            Você já usou {usoSemanal.usados} de {usoSemanal.limite} reservas permitidas para esta unidade
+            nesta semana.
+          </div>
+          <div className="reserva-hero-progresso-legenda" style={{ marginTop: 10 }}>
+            A cota renova na próxima segunda-feira.
+          </div>
+        </div>
+      )}
+
+      {pontos.length > 0 && !reservaAtiva && !limiteAtingido && (
         <div className="stack">
           <div className="ponto-picker">
             <div className="ponto-picker-icone">
