@@ -15,6 +15,7 @@ import NovaUnidade from "./pages/admin/NovaUnidade.jsx";
 import AdicionarMorador from "./pages/admin/AdicionarMorador.jsx";
 import AdminPontos from "./pages/admin/Pontos.jsx";
 import NovoPonto from "./pages/admin/NovoPonto.jsx";
+import AdminConfiguracoes from "./pages/admin/Configuracoes.jsx";
 import AdminHistorico from "./pages/admin/Historico.jsx";
 import Estatistica from "./pages/admin/Estatistica.jsx";
 
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/admin/unidades/:unidadeId/membros/novo" element={<RequireAuth adminOnly><AdicionarMorador /></RequireAuth>} />
         <Route path="/admin/pontos" element={<RequireAuth adminOnly><AdminPontos /></RequireAuth>} />
         <Route path="/admin/pontos/novo" element={<RequireAuth adminOnly><NovoPonto /></RequireAuth>} />
+        <Route path="/admin/configuracoes" element={<RequireAuth adminOnly><AdminConfiguracoes /></RequireAuth>} />
         <Route path="/admin/historico" element={<RequireAuth adminOnly><AdminHistorico /></RequireAuth>} />
         <Route path="/admin/estatistica" element={<RequireAuth adminOnly><Estatistica /></RequireAuth>} />
       </Routes>

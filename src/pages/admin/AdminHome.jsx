@@ -19,10 +19,25 @@ const SECOES = [
   {
     to: "/admin/pontos",
     titulo: "Pontos de Carregamento",
-    descricao: "Gerenciar pontos e configuração global de horários",
+    descricao: "Cadastrar e gerenciar os pontos de carregamento",
     icone: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M13 2 L4 14h6l-1 8 9-12h-6z" />
+      </svg>
+    ),
+  },
+  {
+    to: "/admin/configuracoes",
+    titulo: "Configurações",
+    descricao: "Horário de funcionamento e limite semanal de reservas",
+    icone: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 6h10M18 6h2" />
+        <circle cx="16" cy="6" r="2" />
+        <path d="M4 12h4M12 12h8" />
+        <circle cx="8" cy="12" r="2" />
+        <path d="M4 18h10M18 18h2" />
+        <circle cx="16" cy="18" r="2" />
       </svg>
     ),
   },
