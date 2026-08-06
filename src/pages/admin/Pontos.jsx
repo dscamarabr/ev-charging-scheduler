@@ -12,6 +12,7 @@ export default function AdminPontos() {
   const [pontos, setPontos] = useState([]);
   const [config, setConfig] = useState(null);
   const [erro, setErro] = useState(null);
+  const [sucessoConfig, setSucessoConfig] = useState(false);
   const [acaoEmAndamento, setAcaoEmAndamento] = useState(null); // id do ponto sofrendo ação
 
   async function carregar() {
@@ -60,13 +61,22 @@ export default function AdminPontos() {
 
   async function salvarConfig(e) {
     e.preventDefault();
-    await supabase
+    setErro(null);
+    setSucessoConfig(false);
+    const { error } = await supabase
       .from("configuracao_global")
       .update({
         horario_abertura: config.horario_abertura,
         horario_fechamento: config.horario_fechamento,
+        limite_semanal_reservas_por_unidade: config.limite_semanal_reservas_por_unidade,
       })
       .eq("id", 1);
+    if (error) {
+      setErro(traduzirErro(error.message));
+      return;
+    }
+    setSucessoConfig(true);
+    setTimeout(() => setSucessoConfig(false), 4000);
     carregar();
   }
 
@@ -126,16 +136,39 @@ export default function AdminPontos() {
       <div className="card">
         <h2>Configuração Global</h2>
         {config && (
-          <form onSubmit={salvarConfig} className="row" style={{ alignItems: "flex-end" }}>
-            <div className="field">
-              Horário de abertura
-              <input type="time" value={config.horario_abertura} onChange={(e) => setConfig({ ...config, horario_abertura: e.target.value })} />
+          <form onSubmit={salvarConfig} className="stack">
+            <div className="row" style={{ alignItems: "flex-end" }}>
+              <div className="field">
+                Horário de abertura
+                <input type="time" value={config.horario_abertura} onChange={(e) => setConfig({ ...config, horario_abertura: e.target.value })} />
+              </div>
+              <div className="field">
+                Horário de fechamento
+                <input type="time" value={config.horario_fechamento} onChange={(e) => setConfig({ ...config, horario_fechamento: e.target.value })} />
+              </div>
             </div>
-            <div className="field">
-              Horário de fechamento
-              <input type="time" value={config.horario_fechamento} onChange={(e) => setConfig({ ...config, horario_fechamento: e.target.value })} />
+            <div className="field" style={{ maxWidth: 260 }}>
+              Limite semanal de reservas por unidade
+              <input
+                type="number"
+                min="1"
+                value={config.limite_semanal_reservas_por_unidade}
+                onChange={(e) =>
+                  setConfig({ ...config, limite_semanal_reservas_por_unidade: Number(e.target.value) })
+                }
+              />
+              {/* Soma reservas em todos os pontos, de segunda a domingo — só
+                  conta reserva que chegou a iniciar (ver migration 0017). */}
+              <small style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>
+                Conta reservas que já iniciaram (não as canceladas antes de começar), somando todos os pontos.
+                Semana de segunda a domingo.
+              </small>
             </div>
-            <button type="submit" className="btn btn-primary">Salvar Configuração</button>
+            {erro && <p className="form-error">{erro}</p>}
+            {sucessoConfig && <p className="form-success">Configuração salva com sucesso!</p>}
+            <div className="row">
+              <button type="submit" className="btn btn-primary">Salvar Configuração</button>
+            </div>
           </form>
         )}
       </div>
