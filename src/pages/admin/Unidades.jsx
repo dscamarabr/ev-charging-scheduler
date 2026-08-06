@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { traduzirErro, extrairErroFuncao } from "../../lib/traduzirErro.js";
 import { compararNumero } from "../../lib/compararNumero.js";
-import { AtivoBadge, MembroStatusBadge, MembroAdminBadge } from "../../components/StatusBadge.jsx";
+import { AtivoBadge, MembroStatusBadge } from "../../components/StatusBadge.jsx";
 import NavBar from "../../components/NavBar.jsx";
 import Breadcrumb from "../../components/Breadcrumb.jsx";
 
@@ -223,7 +223,6 @@ export default function AdminUnidades() {
                     <div className="historico-item-info">
                       <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                         <strong>{m.nome}</strong>
-                        <MembroAdminBadge admin={m.admin} />
                         <MembroStatusBadge ativado={ativados.has(m.auth_user_id)} />
                       </div>
                     </div>
