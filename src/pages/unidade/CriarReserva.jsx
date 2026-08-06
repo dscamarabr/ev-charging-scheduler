@@ -64,6 +64,11 @@ export default function CriarReserva() {
   // um aviso com atalho pra reserva já existente.
   const [reservaAtiva, setReservaAtiva] = useState(null);
 
+  // Indicador discreto de RN-13 (limite semanal) — só informativo, a
+  // validação de verdade continua em criar_reserva. null enquanto carrega
+  // (não mostra nada até ter o dado real, pra não piscar "0 de 0").
+  const [usoSemanal, setUsoSemanal] = useState(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -92,6 +97,13 @@ export default function CriarReserva() {
         .limit(1);
       setReservaAtiva(data && data.length > 0 ? data[0] : null);
     });
+
+    supabase
+      .rpc("usos_semana_unidade")
+      .single()
+      .then(({ data }) => {
+        if (data) setUsoSemanal(data);
+      });
   }, []);
 
   useEffect(() => {
@@ -429,7 +441,12 @@ export default function CriarReserva() {
     <>
     <NavBar />
     <main className="page page--narrow">
-      <h1 className="section">Nova Reserva</h1>
+      <h1 className="section" style={{ marginBottom: usoSemanal ? 4 : 32 }}>Nova Reserva</h1>
+      {usoSemanal && (
+        <p className="card-header-subtitle" style={{ marginBottom: 32 }}>
+          {usoSemanal.usados} de {usoSemanal.limite} reservas usadas esta semana
+        </p>
+      )}
 
       {pontos.length === 0 && (
         <p className="form-error">
